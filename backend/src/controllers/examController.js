@@ -1,20 +1,6 @@
 import { db } from "../db/connection.js";
-import { exams, studentExams, results, questions } from "../db/schema.js";
-import {
-  eq,
-  and,
-  desc,
-  asc,
-  count,
-  inArray,
-  sql,
-  gt,
-  lt,
-  gte,
-  lte,
-  or,
-  isNull,
-} from "drizzle-orm";
+import { exams, studentExams, results } from "../db/schema.js";
+import { eq, and, desc, asc, count, inArray, gte, lte } from "drizzle-orm";
 import {
   createExamSchema,
   updateExamSchema,
