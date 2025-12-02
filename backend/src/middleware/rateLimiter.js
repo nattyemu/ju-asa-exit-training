@@ -9,6 +9,11 @@ export const generalLimiter = rateLimit({
 });
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 50,
   message: "Too many login attempts. Try again later.",
+});
+export const changePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many change password attempts. Try again later.",
 });

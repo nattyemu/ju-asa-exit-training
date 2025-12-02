@@ -17,6 +17,7 @@ export const users = mysqlTable("users", {
   password: varchar("password", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull().default("STUDENT"),
   createdAt: datetime("created_at").default(new Date()),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 export const profiles = mysqlTable(
