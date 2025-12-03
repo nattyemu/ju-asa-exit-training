@@ -36,7 +36,7 @@ export const getMyProfile = async (req, res) => {
     if (userData.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "User not found",
+        message: "User not found",
       });
     }
 
@@ -51,7 +51,7 @@ export const getMyProfile = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Failed to fetch user data",
+      message: "Failed to fetch user data",
     });
   }
 };
@@ -268,7 +268,7 @@ export const changePassword = async (req, res) => {
     if (userData.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "User not found",
+        message: "User not found",
       });
     }
 
@@ -281,7 +281,7 @@ export const changePassword = async (req, res) => {
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
         success: false,
-        error: "Current password is incorrect",
+        message: "Current password is incorrect",
       });
     }
 
@@ -301,7 +301,7 @@ export const changePassword = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Password change failed. Please try again.",
+      message: "Password change failed. Please try again.",
     });
   }
 };
@@ -359,7 +359,7 @@ export const getAllUsers = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Failed to fetch users",
+      message: "Failed to fetch users",
     });
   }
 };
@@ -387,14 +387,14 @@ export const updateUserRole = async (req, res) => {
     if (userData.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "User not found",
+        message: "User not found",
       });
     }
 
     if (userId === currentUserId) {
       return res.status(400).json({
         success: false,
-        error: "Cannot change your own role",
+        message: "Cannot change your own role",
       });
     }
 
@@ -409,7 +409,7 @@ export const updateUserRole = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Failed to update user role",
+      message: "Failed to update user role",
     });
   }
 };

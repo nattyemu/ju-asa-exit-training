@@ -57,7 +57,7 @@ export const register = async (req, res) => {
     if (existingUser.length > 0) {
       return res.status(409).json({
         success: false,
-        error: "Email already registered",
+        message: "Email already registered",
       });
     }
 
@@ -112,13 +112,13 @@ export const register = async (req, res) => {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
         success: false,
-        error: "Email already registered",
+        message: "Email already registered",
       });
     }
 
     return res.status(500).json({
       success: false,
-      error: "Registration failed. Please try again.",
+      message: "Registration failed. Please try again.",
     });
   }
 };
@@ -160,7 +160,7 @@ export const login = async (req, res) => {
     if (userData.length === 0) {
       return res.status(401).json({
         success: false,
-        error: "Invalid email or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -168,7 +168,7 @@ export const login = async (req, res) => {
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        error: "Your account is deactivated. Contact admin.",
+        message: "Your account is deactivated. Contact admin.",
       });
     }
     const isPasswordValid = await comparePassword(password, user.password);
@@ -176,7 +176,7 @@ export const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: "Invalid email or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -197,7 +197,7 @@ export const login = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Login failed. Please try again.",
+      message: "Login failed. Please try again.",
     });
   }
 };

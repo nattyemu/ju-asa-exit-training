@@ -50,20 +50,20 @@ export const createExam = async (req, res) => {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
         success: false,
-        error: "An exam with similar details already exists",
+        message: "An exam with similar details already exists",
       });
     }
 
     if (error.code === "ER_DATA_TOO_LONG") {
       return res.status(400).json({
         success: false,
-        error: "One or more fields exceed maximum length",
+        message: "One or more fields exceed maximum length",
       });
     }
 
     return res.status(500).json({
       success: false,
-      error: "Failed to create exam. Please try again.",
+      message: "Failed to create exam. Please try again.",
     });
   }
 };
@@ -114,7 +114,7 @@ export const getAllExams = async (req, res) => {
     console.error("Get all exams error:", error);
     return res.status(500).json({
       success: false,
-      error: "Failed to fetch exams",
+      message: "Failed to fetch exams",
     });
   }
 };
@@ -237,7 +237,7 @@ export const getAvailableExams = async (req, res) => {
     console.error("Get available exams error:", error);
     return res.status(500).json({
       success: false,
-      error: "Failed to fetch available exams",
+      message: "Failed to fetch available exams",
     });
   }
 };
@@ -248,7 +248,7 @@ export const getExamById = async (req, res) => {
     if (isNaN(examId) || examId <= 0) {
       return res.status(400).json({
         success: false,
-        error: "Invalid exam ID",
+        message: "Invalid exam ID",
       });
     }
 
@@ -258,7 +258,7 @@ export const getExamById = async (req, res) => {
     if (!exam) {
       return res.status(404).json({
         success: false,
-        error: "Exam not found",
+        message: "Exam not found",
       });
     }
 
@@ -270,7 +270,7 @@ export const getExamById = async (req, res) => {
     console.error("Get exam by ID error:", error);
     return res.status(500).json({
       success: false,
-      error: "Failed to fetch exam details",
+      message: "Failed to fetch exam details",
     });
   }
 };
@@ -282,7 +282,7 @@ export const updateExam = async (req, res) => {
     if (isNaN(examId) || examId <= 0) {
       return res.status(400).json({
         success: false,
-        error: "Invalid exam ID",
+        message: "Invalid exam ID",
       });
     }
 
@@ -308,7 +308,7 @@ export const updateExam = async (req, res) => {
     if (!existingExam) {
       return res.status(404).json({
         success: false,
-        error: "Exam not found",
+        message: "Exam not found",
       });
     }
 
@@ -343,13 +343,13 @@ export const updateExam = async (req, res) => {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
         success: false,
-        error: "Exam update conflicts with existing data",
+        message: "Exam update conflicts with existing data",
       });
     }
 
     return res.status(500).json({
       success: false,
-      error: "Failed to update exam",
+      message: "Failed to update exam",
     });
   }
 };
@@ -361,7 +361,7 @@ export const updateExamStatus = async (req, res) => {
     if (isNaN(examId) || examId <= 0) {
       return res.status(400).json({
         success: false,
-        error: "Invalid exam ID",
+        message: "Invalid exam ID",
       });
     }
 
@@ -387,7 +387,7 @@ export const updateExamStatus = async (req, res) => {
     if (!existingExam) {
       return res.status(404).json({
         success: false,
-        error: "Exam not found",
+        message: "Exam not found",
       });
     }
 
@@ -439,7 +439,7 @@ export const updateExamStatus = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      error: "Failed to update exam status",
+      message: "Failed to update exam status",
     });
   }
 };
