@@ -78,6 +78,7 @@ export const studentExams = mysqlTable(
     startedAt: datetime("started_at").notNull(),
     submittedAt: datetime("submitted_at"),
     timeSpent: int("time_spent"),
+    updatedAt: datetime("updated_at").default(new Date()),
   },
   (table) => ({
     studentExamIdx: uniqueIndex("student_exam_idx").on(
@@ -86,6 +87,10 @@ export const studentExams = mysqlTable(
     ),
     studentIdx: index("student_idx").on(table.studentId),
     examIdx: index("exam_student_idx").on(table.examId),
+    activeSessionIdx: index("active_session_idx").on(
+      table.studentId,
+      table.submittedAt
+    ),
   })
 );
 
