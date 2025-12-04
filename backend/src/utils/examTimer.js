@@ -73,16 +73,56 @@ export const shouldAutoSubmit = (studentExam, exam) => {
     const startedAt = new Date(studentExam.startedAt);
     const availableUntil = new Date(exam.availableUntil);
 
-    // Check if duration has expired
+    // Check if duration has expired (using exam.duration from database)
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
     if (now >= durationEnd) return true;
 
     // Check if availability deadline has passed
     if (now >= availableUntil) return true;
 
+    // Check if abandoned (no activity for 24 hours)
+    if (studentExam.updatedAt) {
+      const updatedAt = new Date(studentExam.updatedAt);
+      const hoursSinceUpdate = (now - updatedAt) / (1000 * 60 * 60);
+      if (hoursSinceUpdate >= 24) {
+        return true;
+      }
+    }
+
     return false;
   } catch (error) {
     console.error("Error checking auto-submit:", error);
     return false;
+  }
+};
+
+/**
+ * Format time for display
+ * @param {number} hours
+ * @param {number} minutes
+ * @param {number} seconds
+ * @returns {string} Formatted time string
+ */
+export const formatTime = (hours, minutes, seconds) => {
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+};
+
+/**
+ * Calculate time spent in minutes
+ * @param {Date} startedAt - When exam was started
+ * @param {Date} submittedAt - When exam was submitted (optional)
+ * @returns {number} Time spent in minutes
+ */
+export const calculateTimeSpent = (startedAt, submittedAt = new Date()) => {
+  try {
+    const started = new Date(startedAt);
+    const submitted = new Date(submittedAt);
+    const timeSpentMs = submitted - started;
+    return Math.floor(timeSpentMs / (1000 * 60)); // Convert to minutes
+  } catch (error) {
+    console.error("Error calculating time spent:", error);
+    return 0;
   }
 };

@@ -444,7 +444,7 @@ export const saveAnswer = async (req, res) => {
     if (session.submittedAt) {
       return res.status(400).json({
         success: false,
-        message: "Exam already submitted",
+        message: "Exam already submitted. No further actions allowed.",
       });
     }
 
@@ -457,6 +457,19 @@ export const saveAnswer = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Exam not found",
+      });
+    }
+
+    // Check if exam time has expired
+    const now = new Date();
+    const startedAt = new Date(session.startedAt);
+    const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
+
+    if (now > durationEnd) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Exam time has expired. No further answer submissions allowed.",
       });
     }
 
@@ -579,7 +592,7 @@ export const saveMultipleAnswers = async (req, res) => {
     if (session.submittedAt) {
       return res.status(400).json({
         success: false,
-        message: "Exam already submitted",
+        message: "Exam already submitted. No further actions allowed.",
       });
     }
 
@@ -592,6 +605,19 @@ export const saveMultipleAnswers = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Exam not found",
+      });
+    }
+
+    // Check if exam time has expired
+    const now = new Date();
+    const startedAt = new Date(session.startedAt);
+    const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
+
+    if (now > durationEnd) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Exam time has expired. No further answer submissions allowed.",
       });
     }
 
@@ -678,7 +704,6 @@ export const saveMultipleAnswers = async (req, res) => {
     });
   }
 };
-
 /**
  * Resume an exam session
  */
