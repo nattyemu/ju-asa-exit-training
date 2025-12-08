@@ -4,6 +4,9 @@ import userRouter from "./routes/users.js";
 import examRouter from "./routes/exams.js";
 import questionRoutes from "./routes/questions.js";
 import examSessionRoutes from "./routes/examSession.js";
+import submissionRoutes from "./routes/submission.js";
+import resultRoutes from "./routes/results.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 const appRouter = Router();
 
 // API routes
@@ -12,5 +15,8 @@ appRouter.use("/user", userRouter);
 appRouter.use("/exams", examRouter);
 appRouter.use("/questions", questionRoutes);
 appRouter.use("/exam-session", examSessionRoutes);
+appRouter.use("/submission", submissionRoutes);
+appRouter.use("/results", resultRoutes);
+appRouter.use("/analytics", analyticsRoutes);
 
 export default appRouter;
