@@ -126,22 +126,6 @@ export const results = mysqlTable(
   })
 );
 
-export const studentNotes = mysqlTable(
-  "student_notes",
-  {
-    id: int("id").primaryKey().autoincrement(),
-    studentId: int("student_id").notNull(),
-    questionId: int("question_id").notNull(),
-    noteText: text("note_text").notNull(),
-    createdAt: datetime("created_at").default(new Date()),
-    updatedAt: datetime("updated_at").default(new Date()),
-  },
-  (table) => ({
-    studentIdx: index("note_student_idx").on(table.studentId),
-    questionIdx: index("note_question_idx").on(table.questionId),
-  })
-);
-
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, {
@@ -150,7 +134,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   exams: many(studentExams),
   results: many(results),
-  notes: many(studentNotes),
 }));
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -171,7 +154,6 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
     references: [exams.id],
   }),
   answers: many(answers),
-  notes: many(studentNotes),
 }));
 
 export const studentExamsRelations = relations(
@@ -212,16 +194,5 @@ export const resultsRelations = relations(results, ({ one }) => ({
   user: one(users, {
     fields: [results.studentExamId],
     references: [users.id],
-  }),
-}));
-
-export const studentNotesRelations = relations(studentNotes, ({ one }) => ({
-  student: one(users, {
-    fields: [studentNotes.studentId],
-    references: [users.id],
-  }),
-  question: one(questions, {
-    fields: [studentNotes.questionId],
-    references: [questions.id],
   }),
 }));
