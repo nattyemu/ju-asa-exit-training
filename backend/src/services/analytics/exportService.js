@@ -8,10 +8,10 @@ import {
   answers,
   users,
 } from "../../db/schema.js";
-import { sql, eq, and, desc, gte, lte } from "drizzle-orm";
+import { sql, eq, and, desc, gte, lte, inArray } from "drizzle-orm";
 
 /**
- * Export exam results to CSV
+ * Export exam results to CSV/JSON
  */
 export const exportExamResults = async (examId, format = "csv") => {
   try {
@@ -44,19 +44,27 @@ export const exportExamResults = async (examId, format = "csv") => {
         title: exams.title,
         totalQuestions: exams.totalQuestions,
         passingScore: exams.passingScore,
+        duration: exams.duration,
       })
       .from(exams)
       .where(eq(exams.id, examId));
 
+    if (resultsData.length === 0) {
+      return {
+        success: false,
+        error: "No results found for this exam",
+      };
+    }
+
     if (format === "csv") {
-      // Convert to CSV format manually
+      // Convert to CSV format
       const headers = [
         "Rank",
         "Student ID",
         "Full Name",
         "Department",
         "University",
-        "Score",
+        "Score (%)",
         "Correct Answers",
         "Total Questions",
         "Time Spent (minutes)",
@@ -66,17 +74,17 @@ export const exportExamResults = async (examId, format = "csv") => {
 
       const rows = resultsData.map((row) =>
         [
-          row.rank,
+          row.rank || "N/A",
           row.studentId,
-          `"${row.fullName}"`,
-          `"${row.department}"`,
-          `"${row.university}"`,
-          `${row.score}%`,
-          row.correctAnswers,
-          row.totalQuestions,
-          row.timeSpent,
-          row.status,
-          row.submittedAt,
+          `"${row.fullName || "N/A"}"`,
+          `"${row.department || "N/A"}"`,
+          `"${row.university || "N/A"}"`,
+          row.score?.toFixed(2) || "0.00",
+          row.correctAnswers || 0,
+          row.totalQuestions || 0,
+          row.timeSpent || 0,
+          row.status || "N/A",
+          new Date(row.submittedAt).toLocaleString(),
         ].join(",")
       );
 
@@ -87,8 +95,8 @@ export const exportExamResults = async (examId, format = "csv") => {
         data: {
           format: "csv",
           filename: `exam-results-${examId}-${
-            new Date().toISOString().split("T")[0]
-          }.csv`,
+            examInfo[0]?.title?.replace(/\s+/g, "-") || "exam"
+          }-${new Date().toISOString().split("T")[0]}.csv`,
           content: csv,
           metadata: {
             exam: examInfo[0],
@@ -104,9 +112,12 @@ export const exportExamResults = async (examId, format = "csv") => {
         data: {
           format: "json",
           filename: `exam-results-${examId}-${
-            new Date().toISOString().split("T")[0]
-          }.json`,
-          content: resultsData,
+            examInfo[0]?.title?.replace(/\s+/g, "-") || "exam"
+          }-${new Date().toISOString().split("T")[0]}.json`,
+          content: resultsData.map((row) => ({
+            ...row,
+            submittedAt: new Date(row.submittedAt).toISOString(),
+          })),
           metadata: {
             exam: examInfo[0],
             totalRecords: resultsData.length,
@@ -119,7 +130,7 @@ export const exportExamResults = async (examId, format = "csv") => {
     console.error("Export results error:", error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Failed to export exam results",
     };
   }
 };
@@ -132,7 +143,7 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
     const questionData = await db
       .select({
         questionId: questions.id,
-        questionText: sql`SUBSTRING(${questions.questionText}, 1, 200)`.as(
+        questionText: sql`SUBSTRING(${questions.questionText}, 1, 500)`.as(
           "question_text"
         ),
         subject: questions.subject,
@@ -140,11 +151,15 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
         correctAnswer: questions.correctAnswer,
         totalAttempts: sql`COUNT(${answers.id})`.as("total_attempts"),
         correctAttempts:
-          sql`SUM(CASE WHEN ${answers.isCorrect} = 1 THEN 1 ELSE 0 END)`.as(
+          sql`SUM(CASE WHEN ${answers.isCorrect} = true THEN 1 ELSE 0 END)`.as(
             "correct_attempts"
           ),
         accuracy: sql`ROUND(
-          AVG(CASE WHEN ${answers.isCorrect} = 1 THEN 100 ELSE 0 END), 
+          COALESCE(
+            SUM(CASE WHEN ${answers.isCorrect} = true THEN 1 ELSE 0 END) * 100.0 / 
+            NULLIF(COUNT(${answers.id}), 0), 
+            0
+          ), 
           2
         )`.as("accuracy"),
         optionACount:
@@ -168,7 +183,8 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
       .leftJoin(answers, eq(questions.id, answers.questionId))
       .leftJoin(studentExams, eq(answers.studentExamId, studentExams.id))
       .where(eq(questions.examId, examId))
-      .groupBy(questions.id);
+      .groupBy(questions.id)
+      .orderBy(questions.id);
 
     if (format === "csv") {
       const headers = [
@@ -184,24 +200,36 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
         "Option B Count",
         "Option C Count",
         "Option D Count",
+        "Most Common Answer",
       ].join(",");
 
-      const rows = questionData.map((row) =>
-        [
+      const rows = questionData.map((row) => {
+        const optionCounts = {
+          A: row.optionACount || 0,
+          B: row.optionBCount || 0,
+          C: row.optionCCount || 0,
+          D: row.optionDCount || 0,
+        };
+        const mostCommonAnswer = Object.keys(optionCounts).reduce((a, b) =>
+          optionCounts[a] > optionCounts[b] ? a : b
+        );
+
+        return [
           row.questionId,
-          `"${row.questionText}"`,
-          row.subject,
-          row.difficulty,
-          row.correctAnswer,
-          row.totalAttempts,
-          row.correctAttempts,
-          row.accuracy,
-          row.optionACount,
-          row.optionBCount,
-          row.optionCCount,
-          row.optionDCount,
-        ].join(",")
-      );
+          `"${(row.questionText || "").replace(/"/g, '""')}"`,
+          row.subject || "N/A",
+          row.difficulty || "medium",
+          row.correctAnswer || "N/A",
+          row.totalAttempts || 0,
+          row.correctAttempts || 0,
+          row.accuracy || 0,
+          row.optionACount || 0,
+          row.optionBCount || 0,
+          row.optionCCount || 0,
+          row.optionDCount || 0,
+          mostCommonAnswer,
+        ].join(",");
+      });
 
       const csv = [headers, ...rows].join("\n");
 
@@ -239,7 +267,7 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
     console.error("Export question analytics error:", error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Failed to export question analytics",
     };
   }
 };
@@ -252,7 +280,7 @@ export const exportDepartmentPerformance = async (
   format = "csv"
 ) => {
   try {
-    let query = db
+    let baseQuery = db
       .select({
         department: profiles.department,
         studentCount: sql`COUNT(DISTINCT ${studentExams.studentId})`.as(
@@ -262,26 +290,37 @@ export const exportDepartmentPerformance = async (
         totalSubmissions: sql`COUNT(${studentExams.id})`.as(
           "total_submissions"
         ),
-        avgScore: sql`ROUND(AVG(${results.score}), 2)`.as("avg_score"),
-        highestScore: sql`MAX(${results.score})`.as("highest_score"),
-        lowestScore: sql`MIN(${results.score})`.as("lowest_score"),
-        passRate: sql`ROUND(
-          AVG(CASE WHEN ${results.score} >= 50 THEN 1 ELSE 0 END) * 100, 
+        avgScore: sql`COALESCE(ROUND(AVG(${results.score}), 2), 0)`.as(
+          "avg_score"
+        ),
+        highestScore: sql`COALESCE(MAX(${results.score}), 0)`.as(
+          "highest_score"
+        ),
+        lowestScore: sql`COALESCE(MIN(${results.score}), 0)`.as("lowest_score"),
+        passRate: sql`COALESCE(ROUND(
+          AVG(CASE WHEN ${results.score} >= 50 THEN 1.0 ELSE 0.0 END) * 100, 
           2
-        )`.as("pass_rate"),
-        avgTimeSpent: sql`ROUND(AVG(${results.timeSpent}), 2)`.as(
+        ), 0)`.as("pass_rate"),
+        avgTimeSpent: sql`COALESCE(ROUND(AVG(${results.timeSpent}), 2), 0)`.as(
           "avg_time_spent"
         ),
       })
-      .from(results)
-      .innerJoin(studentExams, eq(results.studentExamId, studentExams.id))
-      .innerJoin(profiles, eq(studentExams.studentId, profiles.userId));
+      .from(profiles)
+      .leftJoin(studentExams, eq(profiles.userId, studentExams.studentId))
+      .leftJoin(results, eq(studentExams.id, results.studentExamId))
+      .where(sql`${profiles.department} IS NOT NULL`);
 
     if (examId) {
-      query = query.where(eq(studentExams.examId, examId));
+      baseQuery = baseQuery.where(eq(studentExams.examId, examId));
     }
 
-    const departmentData = await query.groupBy(profiles.department);
+    const departmentData = await baseQuery
+      .groupBy(profiles.department)
+      .orderBy(profiles.department);
+
+    const filteredData = departmentData.filter(
+      (dept) => dept.department && dept.studentCount > 0
+    );
 
     if (format === "csv") {
       const headers = [
@@ -296,7 +335,7 @@ export const exportDepartmentPerformance = async (
         "Average Time Spent (minutes)",
       ].join(",");
 
-      const rows = departmentData.map((row) =>
+      const rows = filteredData.map((row) =>
         [
           `"${row.department}"`,
           row.studentCount,
@@ -326,7 +365,7 @@ export const exportDepartmentPerformance = async (
           content: csv,
           metadata: {
             scope: examId ? `Exam ${examId}` : "All Exams",
-            totalDepartments: departmentData.length,
+            totalDepartments: filteredData.length,
             exportedAt: new Date().toISOString(),
           },
         },
@@ -343,10 +382,10 @@ export const exportDepartmentPerformance = async (
             : `department-performance-all-${
                 new Date().toISOString().split("T")[0]
               }.json`,
-          content: departmentData,
+          content: filteredData,
           metadata: {
             scope: examId ? `Exam ${examId}` : "All Exams",
-            totalDepartments: departmentData.length,
+            totalDepartments: filteredData.length,
             exportedAt: new Date().toISOString(),
           },
         },
@@ -356,13 +395,239 @@ export const exportDepartmentPerformance = async (
     console.error("Export department performance error:", error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Failed to export department performance",
     };
   }
 };
 
 /**
- * Export complete analytics report
+ * Export time-based analytics
+ */
+export const exportTimeAnalytics = async (
+  startDate,
+  endDate,
+  format = "csv"
+) => {
+  try {
+    const dateFilter = and(
+      gte(results.submittedAt, new Date(startDate)),
+      lte(results.submittedAt, new Date(endDate))
+    );
+
+    const timeData = await db
+      .select({
+        hour: sql`EXTRACT(HOUR FROM ${results.submittedAt})`.as("hour"),
+        dayOfWeek: sql`EXTRACT(DOW FROM ${results.submittedAt})`.as(
+          "day_of_week"
+        ),
+        submissions: sql`COUNT(${results.id})`.as("submissions"),
+        avgScore: sql`ROUND(AVG(${results.score}), 2)`.as("avg_score"),
+        passRate: sql`ROUND(
+          AVG(CASE WHEN ${results.score} >= 50 THEN 1 ELSE 0 END) * 100, 
+          2
+        )`.as("pass_rate"),
+        avgTimeSpent: sql`ROUND(AVG(${results.timeSpent}), 2)`.as(
+          "avg_time_spent"
+        ),
+      })
+      .from(results)
+      .where(dateFilter)
+      .groupBy(
+        sql`EXTRACT(HOUR FROM ${results.submittedAt})`,
+        sql`EXTRACT(DOW FROM ${results.submittedAt})`
+      )
+      .orderBy(
+        sql`EXTRACT(DOW FROM ${results.submittedAt})`,
+        sql`EXTRACT(HOUR FROM ${results.submittedAt})`
+      );
+
+    const daysOfWeek = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    if (format === "csv") {
+      const headers = [
+        "Day of Week",
+        "Hour (24h)",
+        "Submissions",
+        "Average Score (%)",
+        "Pass Rate (%)",
+        "Average Time Spent (minutes)",
+      ].join(",");
+
+      const rows = timeData.map((row) =>
+        [
+          daysOfWeek[row.dayOfWeek] || "Unknown",
+          row.hour,
+          row.submissions,
+          row.avgScore,
+          row.passRate,
+          row.avgTimeSpent,
+        ].join(",")
+      );
+
+      const csv = [headers, ...rows].join("\n");
+
+      return {
+        success: true,
+        data: {
+          format: "csv",
+          filename: `time-analytics-${startDate}-to-${endDate}.csv`,
+          content: csv,
+          metadata: {
+            period: `${startDate} to ${endDate}`,
+            totalRecords: timeData.length,
+            exportedAt: new Date().toISOString(),
+          },
+        },
+      };
+    } else {
+      return {
+        success: true,
+        data: {
+          format: "json",
+          filename: `time-analytics-${startDate}-to-${endDate}.json`,
+          content: timeData.map((row) => ({
+            ...row,
+            dayOfWeek: daysOfWeek[row.dayOfWeek] || "Unknown",
+          })),
+          metadata: {
+            period: `${startDate} to ${endDate}`,
+            totalRecords: timeData.length,
+            exportedAt: new Date().toISOString(),
+          },
+        },
+      };
+    }
+  } catch (error) {
+    console.error("Export time analytics error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to export time analytics",
+    };
+  }
+};
+
+/**
+ * Export student performance report
+ */
+export const exportStudentPerformance = async (studentId, format = "csv") => {
+  try {
+    const studentData = await db
+      .select({
+        examTitle: exams.title,
+        score: results.score,
+        correctAnswers: results.correctAnswers,
+        totalQuestions: results.totalQuestions,
+        timeSpent: results.timeSpent,
+        submittedAt: results.submittedAt,
+        rank: results.rank,
+        status: sql`CASE 
+          WHEN ${results.score} >= ${exams.passingScore} THEN 'PASSED'
+          ELSE 'FAILED'
+        END`.as("status"),
+      })
+      .from(results)
+      .innerJoin(studentExams, eq(results.studentExamId, studentExams.id))
+      .innerJoin(exams, eq(studentExams.examId, exams.id))
+      .where(eq(studentExams.studentId, studentId))
+      .orderBy(desc(results.submittedAt));
+
+    const studentInfo = await db
+      .select({
+        fullName: profiles.fullName,
+        department: profiles.department,
+        university: profiles.university,
+      })
+      .from(profiles)
+      .where(eq(profiles.userId, studentId));
+
+    if (studentData.length === 0) {
+      return {
+        success: false,
+        error: "No exam data found for this student",
+      };
+    }
+
+    if (format === "csv") {
+      const headers = [
+        "Exam Title",
+        "Score (%)",
+        "Correct Answers",
+        "Total Questions",
+        "Time Spent (minutes)",
+        "Rank",
+        "Status",
+        "Submitted At",
+      ].join(",");
+
+      const rows = studentData.map((row) =>
+        [
+          `"${row.examTitle}"`,
+          row.score?.toFixed(2) || "0.00",
+          row.correctAnswers || 0,
+          row.totalQuestions || 0,
+          row.timeSpent || 0,
+          row.rank || "N/A",
+          row.status || "N/A",
+          new Date(row.submittedAt).toLocaleString(),
+        ].join(",")
+      );
+
+      const csv = [headers, ...rows].join("\n");
+
+      return {
+        success: true,
+        data: {
+          format: "csv",
+          filename: `student-performance-${
+            studentInfo[0]?.fullName?.replace(/\s+/g, "-") || studentId
+          }-${new Date().toISOString().split("T")[0]}.csv`,
+          content: csv,
+          metadata: {
+            student: studentInfo[0],
+            totalExams: studentData.length,
+            exportedAt: new Date().toISOString(),
+          },
+        },
+      };
+    } else {
+      return {
+        success: true,
+        data: {
+          format: "json",
+          filename: `student-performance-${
+            studentInfo[0]?.fullName?.replace(/\s+/g, "-") || studentId
+          }-${new Date().toISOString().split("T")[0]}.json`,
+          content: studentData.map((row) => ({
+            ...row,
+            submittedAt: new Date(row.submittedAt).toISOString(),
+          })),
+          metadata: {
+            student: studentInfo[0],
+            totalExams: studentData.length,
+            exportedAt: new Date().toISOString(),
+          },
+        },
+      };
+    }
+  } catch (error) {
+    console.error("Export student performance error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to export student performance",
+    };
+  }
+};
+
+/**
+ * Export complete analytics report - SIMPLE WORKING VERSION
  */
 export const exportCompleteReport = async (
   startDate,
@@ -375,7 +640,7 @@ export const exportCompleteReport = async (
       lte(results.submittedAt, new Date(endDate))
     );
 
-    // Get summary statistics
+    // 1. Get basic summary - SIMPLE
     const [summary] = await db
       .select({
         totalExams: sql`COUNT(DISTINCT ${studentExams.examId})`.as(
@@ -385,6 +650,61 @@ export const exportCompleteReport = async (
           "total_students"
         ),
         totalSubmissions: sql`COUNT(${results.id})`.as("total_submissions"),
+        avgScore: sql`COALESCE(ROUND(AVG(${results.score}), 2), 0)`.as(
+          "avg_score"
+        ),
+        passRate: sql`COALESCE(ROUND(
+          AVG(CASE WHEN ${results.score} >= 50 THEN 1 ELSE 0 END) * 100, 
+          2
+        ), 0)`.as("pass_rate"),
+        avgTimeSpent: sql`COALESCE(ROUND(AVG(${results.timeSpent}), 2), 0)`.as(
+          "avg_time_spent"
+        ),
+      })
+      .from(results)
+      .innerJoin(studentExams, eq(results.studentExamId, studentExams.id))
+      .where(dateFilter);
+
+    // 2. Get daily activity - SIMPLE
+    const dailyActivity = await db
+      .select({
+        date: sql`DATE(${results.submittedAt})`.as("date"),
+        submissions: sql`COUNT(${results.id})`.as("submissions"),
+        avgScore: sql`COALESCE(ROUND(AVG(${results.score}), 2), 0)`.as(
+          "avg_score"
+        ),
+      })
+      .from(results)
+      .where(dateFilter)
+      .groupBy(sql`DATE(${results.submittedAt})`)
+      .orderBy(sql`DATE(${results.submittedAt})`);
+
+    // 3. Get top students - SIMPLE
+    const topStudents = await db
+      .select({
+        studentId: studentExams.studentId,
+        fullName: profiles.fullName,
+        avgScore: sql`ROUND(AVG(${results.score}), 2)`.as("avg_score"),
+        totalExams: sql`COUNT(DISTINCT ${studentExams.examId})`.as(
+          "total_exams"
+        ),
+      })
+      .from(results)
+      .innerJoin(studentExams, eq(results.studentExamId, studentExams.id))
+      .innerJoin(profiles, eq(studentExams.studentId, profiles.userId))
+      .where(dateFilter)
+      .groupBy(studentExams.studentId, profiles.fullName)
+      .orderBy(sql`AVG(${results.score}) DESC`)
+      .limit(10);
+
+    // 4. Get exam performance - SIMPLE
+    const examPerformance = await db
+      .select({
+        examId: studentExams.examId,
+        examTitle: exams.title,
+        totalParticipants: sql`COUNT(DISTINCT ${studentExams.studentId})`.as(
+          "total_participants"
+        ),
         avgScore: sql`ROUND(AVG(${results.score}), 2)`.as("avg_score"),
         passRate: sql`ROUND(
           AVG(CASE WHEN ${results.score} >= 50 THEN 1 ELSE 0 END) * 100, 
@@ -393,58 +713,138 @@ export const exportCompleteReport = async (
       })
       .from(results)
       .innerJoin(studentExams, eq(results.studentExamId, studentExams.id))
-      .where(dateFilter);
+      .innerJoin(exams, eq(studentExams.examId, exams.id))
+      .where(dateFilter)
+      .groupBy(studentExams.examId, exams.title)
+      .orderBy(sql`AVG(${results.score}) DESC`);
 
-    // Get daily activity
-    const dailyActivity = await db
+    // 5. Get score distribution - SIMPLE
+    const scoreDistribution = await db
       .select({
-        date: sql`DATE(${results.submittedAt})`.as("date"),
+        scoreRange: sql`
+          CASE
+            WHEN ${results.score} < 50 THEN '0-49'
+            WHEN ${results.score} < 70 THEN '50-69'
+            WHEN ${results.score} < 85 THEN '70-84'
+            ELSE '85-100'
+          END
+        `.as("score_range"),
+        count: sql`COUNT(${results.id})`.as("count"),
+      })
+      .from(results)
+      .where(dateFilter).groupBy(sql`
+        CASE
+          WHEN ${results.score} < 50 THEN '0-49'
+          WHEN ${results.score} < 70 THEN '50-69'
+          WHEN ${results.score} < 85 THEN '70-84'
+          ELSE '85-100'
+        END
+      `).orderBy(sql`
+        CASE
+          WHEN ${results.score} < 50 THEN '0-49'
+          WHEN ${results.score} < 70 THEN '50-69'
+          WHEN ${results.score} < 85 THEN '70-84'
+          ELSE '85-100'
+        END
+      `);
+
+    // 6. Get hourly pattern - SIMPLE
+    const hourlyPattern = await db
+      .select({
+        hour: sql`HOUR(${results.submittedAt})`.as("hour"),
         submissions: sql`COUNT(${results.id})`.as("submissions"),
-        avgScore: sql`ROUND(AVG(${results.score}), 2)`.as("avg_score"),
-        passRate: sql`ROUND(
-          AVG(CASE WHEN ${results.score} >= 50 THEN 1 ELSE 0 END) * 100, 
-          2
-        )`.as("pass_rate"),
       })
       .from(results)
       .where(dateFilter)
-      .groupBy(sql`DATE(${results.submittedAt})`)
-      .orderBy(sql`DATE(${results.submittedAt})`);
+      .groupBy(sql`HOUR(${results.submittedAt})`)
+      .orderBy(sql`HOUR(${results.submittedAt})`);
+
+    // Compile report data
+    const totalSubmissions = parseInt(summary.totalSubmissions) || 1;
 
     const reportData = {
       metadata: {
-        title: "Complete Analytics Report",
+        title: "Analytics Report",
         period: `${startDate} to ${endDate}`,
         generatedAt: new Date().toISOString(),
       },
       summary: {
         totalExams: parseInt(summary.totalExams) || 0,
         totalStudents: parseInt(summary.totalStudents) || 0,
-        totalSubmissions: parseInt(summary.totalSubmissions) || 0,
+        totalSubmissions: totalSubmissions,
         averageScore: `${parseFloat(summary.avgScore) || 0}%`,
         overallPassRate: `${parseFloat(summary.passRate) || 0}%`,
+        averageTimeSpent: `${parseFloat(summary.avgTimeSpent) || 0} minutes`,
       },
       dailyActivity: dailyActivity.map((day) => ({
-        date: day.date,
+        date: new Date(day.date).toISOString().split("T")[0],
         submissions: parseInt(day.submissions) || 0,
         averageScore: `${parseFloat(day.avgScore) || 0}%`,
-        passRate: `${parseFloat(day.passRate) || 0}%`,
+      })),
+      topStudents: topStudents.map((student, index) => ({
+        rank: index + 1,
+        studentId: student.studentId,
+        fullName: student.fullName,
+        averageScore: `${parseFloat(student.avgScore) || 0}%`,
+        totalExamsAttempted: parseInt(student.totalExams) || 0,
+      })),
+      examPerformance: examPerformance.map((exam) => ({
+        examId: exam.examId,
+        examTitle: exam.examTitle,
+        totalParticipants: parseInt(exam.totalParticipants) || 0,
+        averageScore: `${parseFloat(exam.avgScore) || 0}%`,
+        passRate: `${parseFloat(exam.passRate) || 0}%`,
+      })),
+      scoreDistribution: scoreDistribution.map((range) => ({
+        scoreRange: range.scoreRange,
+        count: parseInt(range.count) || 0,
+        percentage:
+          totalSubmissions > 0
+            ? `${((parseInt(range.count) / totalSubmissions) * 100).toFixed(
+                2
+              )}%`
+            : "0%",
+      })),
+      hourlyPattern: hourlyPattern.map((hour) => ({
+        hour: `${hour.hour}:00`,
+        submissions: parseInt(hour.submissions) || 0,
       })),
     };
 
     if (format === "csv") {
-      const headers = [
-        "Date",
-        "Submissions",
-        "Average Score",
-        "Pass Rate",
-      ].join(",");
-
-      const rows = reportData.dailyActivity.map((day) =>
-        [day.date, day.submissions, day.averageScore, day.passRate].join(",")
-      );
-
-      const csv = [headers, ...rows].join("\n");
+      // Create simple CSV
+      const csv = [
+        "ANALYTICS REPORT",
+        `Period: ${reportData.metadata.period}`,
+        `Generated: ${new Date(
+          reportData.metadata.generatedAt
+        ).toLocaleString()}`,
+        "",
+        "SUMMARY",
+        ...Object.entries(reportData.summary).map(
+          ([key, value]) => `${key.replace(/([A-Z])/g, " $1").trim()},${value}`
+        ),
+        "",
+        "DAILY ACTIVITY",
+        "Date,Submissions,Average Score",
+        ...reportData.dailyActivity.map(
+          (day) => `${day.date},${day.submissions},${day.averageScore}`
+        ),
+        "",
+        "TOP STUDENTS",
+        "Rank,Student ID,Full Name,Average Score,Exams Attempted",
+        ...reportData.topStudents.map(
+          (student) =>
+            `${student.rank},${student.studentId},"${student.fullName}",${student.averageScore},${student.totalExamsAttempted}`
+        ),
+        "",
+        "EXAM PERFORMANCE",
+        "Exam ID,Exam Title,Participants,Average Score,Pass Rate",
+        ...reportData.examPerformance.map(
+          (exam) =>
+            `${exam.examId},"${exam.examTitle}",${exam.totalParticipants},${exam.averageScore},${exam.passRate}`
+        ),
+      ].join("\n");
 
       return {
         success: true,
@@ -452,7 +852,6 @@ export const exportCompleteReport = async (
           format: "csv",
           filename: `analytics-report-${startDate}-to-${endDate}.csv`,
           content: csv,
-          summary: reportData.summary,
           metadata: reportData.metadata,
         },
       };
@@ -470,7 +869,16 @@ export const exportCompleteReport = async (
     console.error("Export complete report error:", error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Failed to export complete report",
     };
   }
+};
+
+export default {
+  exportExamResults,
+  exportQuestionAnalytics,
+  exportDepartmentPerformance,
+  exportTimeAnalytics,
+  exportStudentPerformance,
+  exportCompleteReport,
 };

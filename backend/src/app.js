@@ -25,7 +25,7 @@ appRouter.use("/analytics", analyticsRoutes);
 appRouter.use("/notifications", notificationRoutes);
 appRouter.use("/progress", progressRoutes);
 
-if (process.env.NODE_ENV !== "test") {
-  scheduleNotificationJobs();
-}
+// if (process.env.NODE_ENV !== "test") {
+//   scheduleNotificationJobs();
+// }
 export default appRouter;

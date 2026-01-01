@@ -57,7 +57,7 @@ export const sendExamReminder = async (userEmail, examDetails) => {
       
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
       <p style="text-align: center; color: #7f8c8d; font-size: 12px;">
-        This is an automated message from the Exam Management System.
+        This is an automated message from the JU ASA Exam Management System.
       </p>
     </div>
   `;
@@ -89,7 +89,7 @@ export const sendDeadlineWarning = async (userEmail, examDetails) => {
       
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
       <p style="text-align: center; color: #7f8c8d; font-size: 12px;">
-        This is an automated reminder from the Exam Management System.
+        This is an automated reminder from the JU ASA Exam Management System.
       </p>
     </div>
   `;
@@ -122,7 +122,7 @@ export const sendSystemAnnouncement = async (userEmail, announcement) => {
       
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
       <p style="text-align: center; color: #7f8c8d; font-size: 12px;">
-        This is an official announcement from the Exam Management System.
+        This is an official announcement from the JU ASA Exam Management System.
       </p>
     </div>
   `;

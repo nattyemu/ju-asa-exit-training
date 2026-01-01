@@ -67,7 +67,12 @@ export const getAdminDashboard = async (timeRange = "day") => {
     const totalSubmissions = await db
       .select({ count: sql`COUNT(*)`.as("count") })
       .from(studentExams);
-
+    const submissionsToday = await db
+      .select({ count: sql`COUNT(*)`.as("count") })
+      .from(studentExams).where(sql`
+        ${studentExams.submittedAt} IS NOT NULL 
+        AND DATE(${studentExams.submittedAt}) = CURDATE()
+      `);
     // 2. Recent Activity (last 24 hours)
     const recentActivity = await db
       .select({
@@ -182,6 +187,7 @@ export const getAdminDashboard = async (timeRange = "day") => {
           activeExams: parseInt(activeExams[0]?.count) || 0,
           totalQuestions: parseInt(totalQuestions[0]?.count) || 0,
           totalSubmissions: parseInt(totalSubmissions[0]?.count) || 0,
+          submissionsToday: parseInt(submissionsToday[0]?.count) || 0,
           timeRange: timeRange,
         },
         recentActivity: recentActivityWithStatus.map((activity) => ({
