@@ -5,6 +5,7 @@ import { ExamCard } from "../components/student/ExamCard";
 import { examService } from "../services/examService";
 import { adminService } from "../services/adminService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import ProfileUpdateModal from "../components/common/ProfileUpdateModal";
 import {
   LogOut,
   GraduationCap,
@@ -18,12 +19,13 @@ import {
   Plus,
   Send,
   TrendingUp,
+  Edit,
 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 
 export const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserProfile } = useAuth();
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +36,7 @@ export const Dashboard = () => {
     submissionsToday: 0,
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     if (user?.role === "STUDENT") {
@@ -110,6 +113,38 @@ export const Dashboard = () => {
     }
   };
 
+  const handleProfileUpdated = (updatedData) => {
+    updateUserProfile(updatedData);
+    setShowProfileModal(false);
+  };
+
+  const getProfileImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // If it's already a full URL, return as is
+    if (imageUrl.startsWith("http")) return imageUrl;
+    if (imageUrl.startsWith("blob:")) return imageUrl;
+
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+    // Ensure the URL starts with a slash
+    if (!imageUrl.startsWith("/")) {
+      imageUrl = "/" + imageUrl;
+    }
+
+    console.log("Getting profile image URL for:", backendUrl + imageUrl);
+    return backendUrl + imageUrl;
+  };
+  // Handle image error - fixed version
+  const handleImageError = (e) => {
+    e.target.style.display = "none";
+    const fallbackElement = e.target.nextElementSibling;
+    if (fallbackElement && fallbackElement.style) {
+      fallbackElement.style.display = "flex";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-light">
       {/* Header */}
@@ -129,13 +164,23 @@ export const Dashboard = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:text-primary hover:bg-background-light rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Edit Profile Button */}
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:text-primary hover:bg-background-light rounded-lg transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:text-primary hover:bg-background-light rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -146,34 +191,66 @@ export const Dashboard = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
-                    {user?.profile?.fullName?.charAt(0)}
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20">
+                    {user?.profile?.profileImageUrl ? (
+                      <img
+                        src={getProfileImageUrl(user.profile.profileImageUrl)}
+                        alt={user.profile.fullName}
+                        className="w-full h-full object-cover"
+                        onError={handleImageError}
+                      />
+                    ) : null}
+                    {!user?.profile?.profileImageUrl && (
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        {user?.profile?.fullName?.charAt(0) || "U"}
+                      </div>
+                    )}
                   </div>
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary-dark transition-colors shadow-md"
+                    title="Edit Profile"
+                  >
+                    <Edit className="w-3 h-3" />
+                  </button>
                 </div>
                 <div>
                   <h2 className="font-bold text-lg text-text-primary">
-                    {user?.profile?.fullName}
+                    {user?.profile?.fullName || "User"}
                   </h2>
                   <p className="text-sm text-text-secondary">{user?.email}</p>
-                  <span className="inline-block mt-1 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                    {user?.role}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                      {user?.role}
+                    </span>
+                    {user?.profile?.year && (
+                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        GC {user.profile.year}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3">
                   <GraduationCap className="w-5 h-5 text-text-secondary" />
-                  <span className="text-sm">{user?.profile?.university}</span>
+                  <span className="text-sm">
+                    {user?.profile?.university || "JU University"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-text-secondary" />
-                  <span className="text-sm">Year {user?.profile?.year}</span>
+                  <span className="text-sm">
+                    Year {user?.profile?.year || "N/A"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Award className="w-5 h-5 text-text-secondary" />
-                  <span className="text-sm">{user?.profile?.department}</span>
+                  <span className="text-sm">
+                    {user?.profile?.department || "Department"}
+                  </span>
                 </div>
               </div>
 
@@ -631,6 +708,14 @@ export const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Add Profile Update Modal */}
+      <ProfileUpdateModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        userProfile={user?.profile}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </div>
   );
 };

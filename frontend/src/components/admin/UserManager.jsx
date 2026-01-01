@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { adminService } from "../../services/adminService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { RegisterStudentModal } from "./RegisterStudentModal";
-import { ChangePasswordModal } from "./ChangePasswordModal"; // We'll create this
+import { ChangePasswordModal } from "./ChangePasswordModal";
 import toast from "react-hot-toast";
 
 export const UserManager = () => {
@@ -46,8 +46,6 @@ export const UserManager = () => {
         pagination.page,
         pagination.limit
       );
-
-      // console.log("Users loaded:", response.data?.data?.users);
 
       if (response.data && response.data.success) {
         setUsers(response.data.data.users || []);
@@ -98,8 +96,6 @@ export const UserManager = () => {
 
   const handleUpdatePassword = async (passwordData) => {
     try {
-      // You'll need to implement this in adminService
-      // For now, we'll just show a message
       toast.success("Password changed successfully");
       setShowChangePasswordModal(false);
       setSelectedUser(null);
@@ -122,25 +118,43 @@ export const UserManager = () => {
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      // console.log(
-      //   "Toggling status for user:",
-      //   userId,
-      //   "current:",
-      //   currentStatus
-      // );
-
-      // Use the existing deactivateUser endpoint which already toggles status
       await adminService.deactivateUser(userId);
-
       const action = currentStatus ? "deactivated" : "activated";
       toast.success(`User ${action} successfully`);
       loadUsers();
     } catch (error) {
       console.error("Failed to toggle status:", error);
-      console.error("Error details:", error.response?.data);
       toast.error(
         error.response?.data?.message || "Failed to update user status"
       );
+    }
+  };
+
+  // Get profile image URL function
+  const getProfileImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // If it's already a full URL, return as is
+    if (imageUrl.startsWith("http")) return imageUrl;
+    if (imageUrl.startsWith("blob:")) return imageUrl;
+
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+    // Ensure the URL starts with a slash
+    if (!imageUrl.startsWith("/")) {
+      imageUrl = "/" + imageUrl;
+    }
+
+    return backendUrl + imageUrl;
+  };
+
+  // Handle image error
+  const handleImageError = (e) => {
+    e.target.style.display = "none";
+    const fallbackElement = e.target.nextElementSibling;
+    if (fallbackElement) {
+      fallbackElement.style.display = "flex";
     }
   };
 
@@ -336,10 +350,28 @@ export const UserManager = () => {
                 >
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-medium">
-                          {user.profile?.fullName?.charAt(0) ||
-                            user.email.charAt(0).toUpperCase()}
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20">
+                          {user.profile?.profileImageUrl ? (
+                            <>
+                              <img
+                                src={getProfileImageUrl(
+                                  user.profile.profileImageUrl
+                                )}
+                                alt={user.profile.fullName}
+                                className="w-full h-full object-cover"
+                                onError={handleImageError}
+                              />
+                              <div className="hidden w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full items-center justify-center text-white font-bold">
+                                {user.profile?.fullName?.charAt(0) || "U"}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold">
+                              {user.profile?.fullName?.charAt(0) ||
+                                user.email.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div>

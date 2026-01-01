@@ -29,6 +29,7 @@ export const profiles = mysqlTable(
     department: varchar("department", { length: 255 }).notNull(),
     university: varchar("university", { length: 255 }).notNull(),
     year: int("year").notNull(),
+    profileImageUrl: varchar("profile_image_url", { length: 500 }),
   },
   (table) => ({
     userIdx: index("user_idx").on(table.userId),

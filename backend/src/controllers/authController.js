@@ -37,9 +37,18 @@ export const register = async (req, res) => {
       university,
       year,
       department,
+      profileImageUrl = null, // Get URL from request body
     } = req.body;
 
-    const validationResult = registerSchema.safeParse(req.body);
+    const validationResult = registerSchema.safeParse({
+      email,
+      password,
+      fullName,
+      department,
+      university,
+      year: parseInt(year),
+      role,
+    });
 
     if (!validationResult.success) {
       return res.status(400).json({
@@ -70,12 +79,14 @@ export const register = async (req, res) => {
       role,
     });
 
+    // Insert profile with optional image URL
     await db.insert(profiles).values({
       userId: user.insertId,
       fullName,
       department,
       university,
       year: parseInt(year),
+      profileImageUrl,
     });
 
     const [completeUser] = await db
@@ -90,6 +101,7 @@ export const register = async (req, res) => {
           department: profiles.department,
           university: profiles.university,
           year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
         },
       })
       .from(users)
@@ -150,6 +162,7 @@ export const login = async (req, res) => {
           department: profiles.department,
           university: profiles.university,
           year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
         },
       })
       .from(users)

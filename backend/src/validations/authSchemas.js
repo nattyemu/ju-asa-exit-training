@@ -22,14 +22,22 @@ export const registerSchema = z.object({
     .max(100, "University name is too long"),
   year: z
     .number()
-    .int("Graduation year must be a whole number")
-    .min(2000, "Graduation year must be 2000 or later")
-    .max(2030, "Graduation year must be 2030 or earlier"),
+    .int()
+    .min(
+      new Date().getFullYear(),
+      `Year must be at least ${new Date().getFullYear()}`
+    )
+    .max(
+      new Date().getFullYear() + 10,
+      `Year cannot exceed ${new Date().getFullYear() + 10}`
+    )
+    .optional(),
   role: z
     .enum(["STUDENT", "ADMIN"], {
       errorMap: () => ({ message: "Role must be either STUDENT or ADMIN" }),
     })
     .default("STUDENT"),
+  profileImageUrl: z.string().nullable().optional(),
 });
 
 export const loginSchema = z.object({
@@ -56,7 +64,14 @@ export const updateProfileSchema = z.object({
   year: z
     .number()
     .int()
-    .min(2000)
-    .max(2030, "Invalid graduation year")
+    .min(
+      new Date().getFullYear(),
+      `Year must be at least ${new Date().getFullYear()}`
+    )
+    .max(
+      new Date().getFullYear() + 10,
+      `Year cannot exceed ${new Date().getFullYear() + 10}`
+    )
     .optional(),
+  profileImageUrl: z.string().nullable().optional(),
 });
