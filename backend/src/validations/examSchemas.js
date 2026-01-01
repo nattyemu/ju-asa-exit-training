@@ -10,7 +10,8 @@ export const createExamSchema = z
       .string()
       .min(10, "Description must be at least 10 characters")
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? undefined : val)), // Handle empty string
     availableFrom: z
       .string()
       .min(1, "Available from date is required")
@@ -32,7 +33,8 @@ export const createExamSchema = z
         (date) => {
           const d = new Date(date);
           const now = new Date();
-          return d > now;
+          // Allow dates up to 1 minute in the past to account for small time differences
+          return d > new Date(now.getTime() - 60000);
         },
         {
           message: "Available from date must be in the future",
@@ -95,7 +97,8 @@ export const updateExamSchema = z
       .string()
       .min(10, "Description must be at least 10 characters")
       .optional()
-      .or(z.literal("")),
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? undefined : val)),
     availableFrom: z
       .string()
       .refine(
@@ -182,6 +185,8 @@ export const formatZodError = (error) => {
             ? "Total questions"
             : field === "passingScore"
             ? "Passing score"
+            : field === "description"
+            ? "Description"
             : field.charAt(0).toUpperCase() + field.slice(1);
         return `${fieldName}: ${issue.message}`;
       }

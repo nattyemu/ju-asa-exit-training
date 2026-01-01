@@ -18,11 +18,33 @@ router.post(
   authorize("ADMIN"),
   sendSystemAnnouncementController
 );
-router.post(
-  "/reminders/exam/:examId",
-  authorize("ADMIN"),
-  sendExamRemindersController
-);
+
+// FIXED: Handle "all" as a special parameter value
+router.post("/reminders/exam/:examId", authorize("ADMIN"), async (req, res) => {
+  try {
+    let { examId } = req.params;
+
+    // If examId is "all", treat it as null
+    if (examId === "all") {
+      examId = null;
+    }
+
+    // Create modified request object
+    const modifiedReq = {
+      ...req,
+      params: { examId },
+    };
+
+    return sendExamRemindersController(modifiedReq, res);
+  } catch (error) {
+    // console.error("Route handler error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 router.post(
   "/reminders/deadline",
   authorize("ADMIN"),

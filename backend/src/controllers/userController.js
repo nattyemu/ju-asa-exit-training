@@ -320,6 +320,7 @@ export const getAllUsers = async (req, res) => {
           email: users.email,
           role: users.role,
           createdAt: users.createdAt,
+          isActive: users.isActive,
         },
         profile: {
           fullName: profiles.fullName,

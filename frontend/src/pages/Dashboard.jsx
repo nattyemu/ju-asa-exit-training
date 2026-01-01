@@ -1,0 +1,636 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate, Link } from "react-router-dom";
+import { ExamCard } from "../components/student/ExamCard";
+import { examService } from "../services/examService";
+import { adminService } from "../services/adminService";
+import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import {
+  LogOut,
+  GraduationCap,
+  Calendar,
+  Award,
+  BookOpen,
+  Trophy,
+  CheckCircle,
+  Users,
+  BarChart3,
+  Plus,
+  Send,
+  TrendingUp,
+} from "lucide-react";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
+
+export const Dashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [exams, setExams] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [adminStats, setAdminStats] = useState({
+    activeExams: 0,
+    totalStudents: 0,
+    totalQuestions: 0,
+    submissionsToday: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      loadExams();
+    } else if (user?.role === "ADMIN") {
+      loadAdminStats();
+    }
+  }, [user]);
+
+  const loadAdminStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const response = await adminService.getAdminDashboard();
+      console.log("Admin dashboard API response:", response);
+
+      if (response.data.success) {
+        const data = response.data.data;
+        console.log("Admin dashboard data:", data);
+
+        // Extract stats from the correct structure
+        const systemOverview = data.systemOverview || {};
+
+        setAdminStats({
+          activeExams: systemOverview.activeExams || 0,
+          totalStudents: systemOverview.totalStudents || 0,
+          totalQuestions: systemOverview.totalQuestions || 0,
+          submissionsToday: systemOverview.submissionsToday || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load admin stats:", error);
+      toast.error("Failed to load admin dashboard statistics");
+      setAdminStats({
+        activeExams: 0,
+        totalStudents: 0,
+        totalQuestions: 0,
+        submissionsToday: 0,
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const loadExams = async () => {
+    try {
+      setIsLoading(true);
+      const response = await examService.getAvailableExams();
+      if (response.data.success) {
+        setExams(response.data.data.exams || []);
+      }
+    } catch (error) {
+      console.error("Failed to load exams:", error);
+      toast.error("Failed to load available exams");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartExam = (exam) => {
+    if (exam.status === "COMPLETED") {
+      navigate(`/student/results/${exam.id}`);
+    } else {
+      navigate(`/exam/${exam.id}`);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background-light">
+      {/* Header */}
+      <header className="bg-white border-b border-border shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-text-primary">
+                  Exit Exam Dashboard
+                </h1>
+                <p className="text-sm text-text-secondary">
+                  Welcome back, {user?.profile?.fullName}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:text-primary hover:bg-background-light rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - User Info & Navigation */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    {user?.profile?.fullName?.charAt(0)}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg text-text-primary">
+                    {user?.profile?.fullName}
+                  </h2>
+                  <p className="text-sm text-text-secondary">{user?.email}</p>
+                  <span className="inline-block mt-1 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                    {user?.role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <GraduationCap className="w-5 h-5 text-text-secondary" />
+                  <span className="text-sm">{user?.profile?.university}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-text-secondary" />
+                  <span className="text-sm">Year {user?.profile?.year}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Award className="w-5 h-5 text-text-secondary" />
+                  <span className="text-sm">{user?.profile?.department}</span>
+                </div>
+              </div>
+
+              {/* Navigation Links */}
+              <div className="border-t border-border pt-6">
+                {user?.role === "STUDENT" ? (
+                  <div className="space-y-2">
+                    <Link
+                      to="/progress"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <TrendingUp className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">My Progress</span>
+                    </Link>
+                    <Link
+                      to="/student/results"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Trophy className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">My Results</span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Link
+                      to="/admin/analytics"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <BarChart3 className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">Analytics</span>
+                    </Link>
+                    <Link
+                      to="/admin/users"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Users className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">User Management</span>
+                    </Link>
+                    <Link
+                      to="/admin/exams"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <BookOpen className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">Exam Management</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Content */}
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-bold text-text-primary mb-6">
+              {user?.role === "ADMIN"
+                ? "Admin Dashboard"
+                : "Available Practice Exams"}
+            </h2>
+
+            {user?.role === "ADMIN" ? (
+              <div className="space-y-8">
+                {/* Welcome Card */}
+                <div className="bg-gradient-to-r from-primary to-primary-dark rounded-xl p-6 text-white">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">
+                        Welcome, Admin!
+                      </h2>
+                      <p className="opacity-90">
+                        Manage exams, students, and view system analytics
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => navigate("/admin/exams")}
+                        className="px-4 py-2 bg-white text-primary rounded-lg hover:bg-opacity-90 font-medium transition-colors"
+                      >
+                        Manage Exams
+                      </button>
+                      <button
+                        onClick={() => navigate("/admin/users")}
+                        className="px-4 py-2 border border-white border-opacity-30 rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors"
+                      >
+                        View Users
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {isLoadingStats ? (
+                    Array(4)
+                      .fill()
+                      .map((_, index) => (
+                        <div
+                          key={index}
+                          className="bg-white rounded-xl border border-border p-4"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-text-secondary mb-2">
+                                {index === 0
+                                  ? "Active Exams"
+                                  : index === 1
+                                  ? "Total Students"
+                                  : index === 2
+                                  ? "Questions"
+                                  : "Submissions Today"}
+                              </p>
+                              <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                            </div>
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                              {index === 0 ? (
+                                <CheckCircle className="w-5 h-5 text-gray-400" />
+                              ) : index === 1 ? (
+                                <Users className="w-5 h-5 text-gray-400" />
+                              ) : index === 2 ? (
+                                <BookOpen className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <BarChart3 className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <>
+                      <div className="bg-white rounded-xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-text-secondary">
+                              Active Exams
+                            </p>
+                            <p className="text-2xl font-bold text-text-primary">
+                              {adminStats.activeExams}
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-text-secondary">
+                              Total Students
+                            </p>
+                            <p className="text-2xl font-bold text-text-primary">
+                              {adminStats.totalStudents}
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Users className="w-5 h-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-text-secondary">
+                              Questions
+                            </p>
+                            <p className="text-2xl font-bold text-text-primary">
+                              {adminStats.totalQuestions}
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-purple-600" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-text-secondary">
+                              Submissions Today
+                            </p>
+                            <p className="text-2xl font-bold text-text-primary">
+                              {adminStats.submissionsToday}
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <BarChart3 className="w-5 h-5 text-yellow-600" />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-white rounded-xl border border-border p-6">
+                  <h3 className="text-lg font-bold text-text-primary mb-4">
+                    Quick Actions
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button
+                      onClick={() => navigate("/admin/exams")}
+                      className="p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                          <Plus className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-text-primary">
+                            Create Exam
+                          </div>
+                          <div className="text-xs text-text-secondary">
+                            New practice exam
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => navigate("/admin/analytics")}
+                      className="p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-text-primary">
+                            View Analytics
+                          </div>
+                          <div className="text-xs text-text-secondary">
+                            Performance reports
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/admin/notifications");
+                      }}
+                      className="p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Send className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-text-primary">
+                            Send Notifications
+                          </div>
+                          <div className="text-xs text-text-secondary">
+                            Exam reminders
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => navigate("/admin/users")}
+                      className="p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Users className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-text-primary">
+                            Manage Students
+                          </div>
+                          <div className="text-xs text-text-secondary">
+                            User accounts
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-xl border border-border p-6">
+                  <h3 className="text-lg font-bold text-text-primary mb-4">
+                    Recent Activity
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Plus className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-text-primary">
+                          No recent activity
+                        </div>
+                        <div className="text-xs text-text-secondary">
+                          Activity will appear here
+                        </div>
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        Just now
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+                {/* Student Section */}
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-text-primary">
+                    Available Practice Exams
+                  </h2>
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date().toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                {isLoading ? (
+                  <div className="py-12 text-center">
+                    <LoadingSpinner size="lg" />
+                    <p className="mt-4 text-text-secondary">Loading exams...</p>
+                  </div>
+                ) : exams.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {exams.map((exam) => (
+                      <ExamCard
+                        key={exam.id}
+                        exam={exam}
+                        onStart={handleStartExam}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BookOpen className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary mb-2">
+                      No Exams Available
+                    </h3>
+                    <p className="text-text-secondary mb-6">
+                      Check back later for available practice exams.
+                    </p>
+                  </div>
+                )}
+
+                {/* Stats Section */}
+                <div className="mt-8 pt-6 border-t border-border">
+                  <h3 className="font-medium text-text-primary mb-4">
+                    Your Progress
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-primary mb-1">
+                        {exams.filter((e) => e.status === "COMPLETED").length}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        Completed
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-yellow-600 mb-1">
+                        {exams.filter((e) => e.status === "IN_PROGRESS").length}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        In Progress
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-blue-600 mb-1">
+                        {exams.filter((e) => e.status === "NOT_STARTED").length}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        Available
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-green-600 mb-1">
+                        {
+                          exams.filter((e) => e.result?.score >= e.passingScore)
+                            .length
+                        }
+                      </div>
+                      <div className="text-xs text-text-secondary">Passed</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Review Section - Only for students with completed exams */}
+            {user?.role === "STUDENT" &&
+              exams.filter((e) => e.status === "COMPLETED").length > 0 && (
+                <div className="mt-8">
+                  <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-bold text-text-primary">
+                        Recent Exam Review
+                      </h3>
+                      <button
+                        className="text-sm text-primary hover:text-primary-dark font-medium"
+                        onClick={() => navigate("/student/results")}
+                      >
+                        View All Results →
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {exams
+                        .filter((e) => e.status === "COMPLETED")
+                        .slice(0, 2)
+                        .map((exam) => (
+                          <div
+                            key={exam.id}
+                            className="border border-border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-medium text-text-primary">
+                                {exam.title}
+                              </h4>
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded ${
+                                  exam.result?.score >= exam.passingScore
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {exam.result?.score || 0}%
+                              </span>
+                            </div>
+                            <div className="text-sm text-text-secondary mb-4">
+                              {exam.result?.submittedAt
+                                ? `Completed: ${format(
+                                    new Date(exam.result.submittedAt),
+                                    "MMM d, yyyy"
+                                  )}`
+                                : "Completion date not available"}
+                            </div>
+                            <button
+                              onClick={() =>
+                                navigate(`/student/results/${exam.id}`)
+                              }
+                              className="w-full py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors text-sm font-medium"
+                            >
+                              View Detailed Results
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};

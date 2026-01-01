@@ -443,3 +443,55 @@ export const updateExamStatus = async (req, res) => {
     });
   }
 };
+export const getAdminDashboardStats = async (req, res) => {
+  try {
+    // Get active exams count
+    const [activeExamsResult] = await db
+      .select({ count: count() })
+      .from(exams)
+      .where(eq(exams.isActive, true));
+
+    // Get total students count
+    const [totalStudentsResult] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(eq(users.role, "STUDENT"));
+
+    // Get total questions count
+    const [totalQuestionsResult] = await db
+      .select({ count: count() })
+      .from(questions);
+
+    // Get submissions today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [submissionsTodayResult] = await db
+      .select({ count: count() })
+      .from(studentExams)
+      .where(
+        and(
+          gte(studentExams.submittedAt, today),
+          lt(studentExams.submittedAt, tomorrow)
+        )
+      );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        activeExams: activeExamsResult.count || 0,
+        totalStudents: totalStudentsResult.count || 0,
+        totalQuestions: totalQuestionsResult.count || 0,
+        submissionsToday: submissionsTodayResult.count || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Get admin dashboard stats error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin dashboard stats",
+    });
+  }
+};

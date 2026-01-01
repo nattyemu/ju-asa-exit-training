@@ -7,6 +7,7 @@ import {
   getExamById,
   updateExam,
   updateExamStatus,
+  getAdminDashboardStats,
 } from "../controllers/examController.js";
 
 const router = express.Router();
@@ -18,7 +19,7 @@ router.post("/", authorize("ADMIN"), createExam);
 router.get("/all", authorize("ADMIN"), getAllExams);
 router.put("/:id", authorize("ADMIN"), updateExam);
 router.put("/:id/status", authorize("ADMIN"), updateExamStatus);
-
+router.get("/admin/dashboard", authorize("ADMIN"), getAdminDashboardStats);
 // Student routes - get available exams
 router.get("/", getAvailableExams);
 
