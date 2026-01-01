@@ -24,9 +24,16 @@ export const updateProfileSchema = z.object({
       year: z
         .number()
         .int()
-        .min(1, "Year must be at least 1")
-        .max(6, "Year must be between 1 and 6")
+        .min(
+          new Date().getFullYear(),
+          `Year must be at least ${new Date().getFullYear()}`
+        )
+        .max(
+          new Date().getFullYear() + 10,
+          `Year cannot exceed ${new Date().getFullYear() + 10}`
+        )
         .optional(),
+      profileImageUrl: z.string().max(500).nullable().optional(),
     })
     .refine(
       (data) => {

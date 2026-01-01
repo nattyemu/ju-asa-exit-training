@@ -66,11 +66,38 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const updateUserProfile = (updatedProfileData) => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+      // Merge updated profile data
+      const updatedUser = {
+        ...currentUser,
+        profile: {
+          ...currentUser.profile,
+          ...updatedProfileData.profile,
+        },
+      };
+
+      // Update localStorage
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // Update state
+      setUser(updatedUser);
+
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
     loading,
+    updateUserProfile,
     isAuthenticated: !!user,
     isAdmin: user?.role === "ADMIN",
     isStudent: user?.role === "STUDENT",

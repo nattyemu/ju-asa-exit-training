@@ -9,6 +9,7 @@ import resultRoutes from "./routes/results.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import notificationRoutes from "./routes/notifications.js";
 import progressRoutes from "./routes/progress.js";
+import uploadRouter from "./routes/upload.js";
 import { scheduleNotificationJobs } from "./jobs/reminderJobs.js";
 
 const appRouter = Router();
@@ -24,6 +25,7 @@ appRouter.use("/results", resultRoutes);
 appRouter.use("/analytics", analyticsRoutes);
 appRouter.use("/notifications", notificationRoutes);
 appRouter.use("/progress", progressRoutes);
+appRouter.use("/upload", uploadRouter);
 
 // if (process.env.NODE_ENV !== "test") {
 //   scheduleNotificationJobs();

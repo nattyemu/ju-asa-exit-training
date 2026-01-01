@@ -1,3 +1,4 @@
+import React from "react";
 import { LoginForm } from "../components/auth/LoginForm";
 import { useAuth } from "../contexts/AuthContext";
 import { Navigate, useLocation } from "react-router-dom";

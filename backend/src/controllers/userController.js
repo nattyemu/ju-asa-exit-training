@@ -11,6 +11,64 @@ import {
   updateUserRoleSchema,
   formatZodError,
 } from "../validations/userSchemas.js";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper function to extract filename from URL
+const extractFilenameFromUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  const urlParts = imageUrl.split("/");
+  return urlParts[urlParts.length - 1];
+};
+
+// Helper function to delete old profile image
+const deleteOldProfileImage = async (imageUrl) => {
+  if (
+    !imageUrl ||
+    imageUrl === "" ||
+    imageUrl === "null" ||
+    imageUrl === "undefined"
+  ) {
+    return { success: true, message: "No image to delete" };
+  }
+
+  try {
+    const filename = extractFilenameFromUrl(imageUrl);
+    if (!filename) {
+      return { success: false, message: "Invalid image URL" };
+    }
+
+    const filePath = path.join(
+      __dirname,
+      "../../public/img/profiles",
+      filename
+    );
+
+    // Check if file exists
+    try {
+      await fs.access(filePath);
+    } catch (error) {
+      console.log(`⚠️ Profile image not found: ${filename}`);
+      return { success: true, message: "Image already deleted" };
+    }
+
+    // Delete the file
+    await fs.unlink(filePath);
+    console.log(`✅ Successfully deleted old profile image: ${filename}`);
+    return { success: true, message: "Image deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting old profile image:", error);
+    return {
+      success: false,
+      message: "Failed to delete old image",
+      error: error.message,
+    };
+  }
+};
 
 export const getMyProfile = async (req, res) => {
   try {
@@ -26,6 +84,7 @@ export const getMyProfile = async (req, res) => {
           department: profiles.department,
           university: profiles.university,
           year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
         },
       })
       .from(users)
@@ -67,10 +126,16 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: errorMessage,
-        errors: validationResult.error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        })),
+        // FIX: Check if errors array exists
+        errors: validationResult.error.errors
+          ? validationResult.error.errors.map((err) => ({
+              field:
+                err.path && err.path.length > 0
+                  ? err.path.join(".")
+                  : "unknown",
+              message: err.message,
+            }))
+          : [],
       });
     }
 
@@ -108,6 +173,50 @@ export const updateProfile = async (req, res) => {
       updateData.year = validatedData.year;
     }
 
+    // Handle profile image URL
+    if (validatedData.profileImageUrl !== undefined) {
+      updateData.profileImageUrl = validatedData.profileImageUrl;
+
+      // If updating profile image, delete the old one if it exists
+      if (
+        existingProfile &&
+        existingProfile.profileImageUrl &&
+        existingProfile.profileImageUrl !== validatedData.profileImageUrl
+      ) {
+        // Only delete if the new image is different from the old one
+        const deleteResult = await deleteOldProfileImage(
+          existingProfile.profileImageUrl
+        );
+        if (!deleteResult.success) {
+          console.warn(
+            "Failed to delete old profile image:",
+            deleteResult.message
+          );
+        }
+      }
+    }
+
+    // Handle profile image deletion (when set to empty string or null)
+    if (
+      validatedData.profileImageUrl === "" ||
+      validatedData.profileImageUrl === null
+    ) {
+      updateData.profileImageUrl = null;
+
+      // Delete old image if it exists
+      if (existingProfile && existingProfile.profileImageUrl) {
+        const deleteResult = await deleteOldProfileImage(
+          existingProfile.profileImageUrl
+        );
+        if (!deleteResult.success) {
+          console.warn(
+            "Failed to delete old profile image:",
+            deleteResult.message
+          );
+        }
+      }
+    }
+
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
@@ -128,6 +237,9 @@ export const updateProfile = async (req, res) => {
       const hasUniversity =
         validatedData.university && validatedData.university.trim() !== "";
       const hasYear = validatedData.year !== undefined;
+      const hasImage =
+        validatedData.profileImageUrl &&
+        validatedData.profileImageUrl.trim() !== "";
 
       // Minimum requirements for new profile
       if (!hasFullName) {
@@ -153,38 +265,28 @@ export const updateProfile = async (req, res) => {
         ? validatedData.university.trim()
         : "University";
       const yearValue = hasYear ? validatedData.year : 1;
-
-      console.log("Inserting profile with userId:", userId);
-      console.log("Values:", {
-        userId,
-        fullNameValue,
-        departmentValue,
-        universityValue,
-        yearValue,
-      });
+      const imageUrlValue = hasImage
+        ? validatedData.profileImageUrl.trim()
+        : null;
 
       try {
-        const sqlQuery = `INSERT INTO profiles (user_id, full_name, department, university, year) VALUES (?, ?, ?, ?, ?)`;
-
-        await db.execute(sql`${sql}`, [
-          userId,
-          fullNameValue,
-          departmentValue,
-          universityValue,
-          yearValue,
-        ]);
-      } catch (sqlError) {
-        console.error("SQL insert error:", sqlError);
-        const connection = db;
-
         await db.insert(profiles).values({
           userId: userId,
-          user_id: userId,
           fullName: fullNameValue,
-          full_name: fullNameValue,
           department: departmentValue,
           university: universityValue,
           year: yearValue,
+          profileImageUrl: imageUrlValue,
+        });
+      } catch (sqlError) {
+        console.error("SQL insert error:", sqlError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to create profile",
+          error:
+            process.env.NODE_ENV === "development"
+              ? sqlError.message
+              : undefined,
         });
       }
     }
@@ -203,6 +305,7 @@ export const updateProfile = async (req, res) => {
           department: profiles.department,
           university: profiles.university,
           year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
         },
       })
       .from(users)
@@ -221,8 +324,7 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update profile error:", error);
-    console.error("Error SQL:", error.cause?.sql);
-    console.error("Error params:", error.params);
+    console.error("Error stack:", error.stack);
 
     if (error.code === "ER_DATA_TOO_LONG") {
       return res.status(400).json({
@@ -241,6 +343,7 @@ export const updateProfile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -327,6 +430,7 @@ export const getAllUsers = async (req, res) => {
           department: profiles.department,
           university: profiles.university,
           year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
         },
       })
       .from(users)
@@ -364,6 +468,7 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
+
 export const updateUserRole = async (req, res) => {
   try {
     const validationResult = updateUserRoleSchema.safeParse(req);
@@ -447,8 +552,35 @@ export const deactivateUser = async (req, res) => {
       });
     }
 
+    // Get user's profile to check if there's an image to delete
+    const [userProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+
     const isCurrentlyActive = userData.isActive;
     const newStatus = !isCurrentlyActive;
+
+    // If deactivating user and they have a profile image, delete it
+    if (!newStatus && userProfile && userProfile.profileImageUrl) {
+      const deleteResult = await deleteOldProfileImage(
+        userProfile.profileImageUrl
+      );
+      if (!deleteResult.success) {
+        console.warn(
+          "Failed to delete profile image during deactivation:",
+          deleteResult.message
+        );
+      }
+
+      // Also remove the image URL from the database
+      await db
+        .update(profiles)
+        .set({
+          profileImageUrl: null,
+        })
+        .where(eq(profiles.userId, userId));
+    }
 
     await db
       .update(users)
@@ -493,5 +625,38 @@ export const deactivateUser = async (req, res) => {
       message:
         "Unable to process your request at this time. Please try again later.",
     });
+  }
+};
+
+// Helper function to delete user profile and associated image
+export const deleteUserProfile = async (userId) => {
+  try {
+    // Get user's profile to check if there's an image to delete
+    const [userProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+
+    if (userProfile && userProfile.profileImageUrl) {
+      // Delete the profile image file
+      const deleteResult = await deleteOldProfileImage(
+        userProfile.profileImageUrl
+      );
+      if (!deleteResult.success) {
+        console.warn("Failed to delete profile image:", deleteResult.message);
+      }
+    }
+
+    // Delete the profile record
+    await db.delete(profiles).where(eq(profiles.userId, userId));
+
+    return { success: true, message: "Profile deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting user profile:", error);
+    return {
+      success: false,
+      message: "Failed to delete profile",
+      error: error.message,
+    };
   }
 };
