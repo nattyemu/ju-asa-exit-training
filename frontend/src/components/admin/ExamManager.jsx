@@ -136,9 +136,14 @@ export const ExamManager = () => {
     setShowQuestionBank(true);
   };
 
-  const handleViewAnalytics = (examId) => {
+  const handleViewAnalytics = (examId, examTitle) => {
     // Navigate to analytics page with examId as URL parameter
-    navigate(`/admin/analytics?examId=${examId}`);
+    navigate("/admin/analytics", {
+      state: {
+        examId: examId,
+        examTitle: examTitle,
+      },
+    });
   };
 
   const getStatusBadge = (isActive) => (
@@ -400,7 +405,7 @@ export const ExamManager = () => {
                         <Award className="w-4 h-4 text-green-600" />
                       </button>
                       <button
-                        onClick={() => handleViewAnalytics(exam.id)} // Updated this line
+                        onClick={() => handleViewAnalytics(exam.id, exam.title)}
                         className="p-2 hover:bg-purple-50 rounded-lg transition-colors"
                         title="View Analytics"
                       >

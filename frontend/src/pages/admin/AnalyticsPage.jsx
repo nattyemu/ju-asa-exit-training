@@ -1,3 +1,4 @@
+import React from "react";
 import { AnalyticsDashboard } from "../../components/admin/AnalyticsDashboard";
 import { useAuth } from "../../contexts/AuthContext";
 import { Navigate } from "react-router-dom";

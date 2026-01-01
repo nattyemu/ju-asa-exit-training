@@ -59,6 +59,7 @@ backend/dist/
 
 # Frontend specific
 frontend/.env
+frontend/.vite
 frontend/build/
 frontend/.eslintcache
 
