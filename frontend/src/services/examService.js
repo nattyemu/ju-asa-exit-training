@@ -1,7 +1,7 @@
 import api from "./api";
 
 export const examService = {
-  // Get all exams (for admin) - ADD THIS METHOD
+  // Get all exams (for admin)
   getAllExams: (page = 1, limit = 10) =>
     api.get(`/exams/all?page=${page}&limit=${limit}`),
 
@@ -57,7 +57,22 @@ export const examService = {
   // Get performance by subject
   getSubjectPerformance: () => api.get("/results/performance/subjects"),
 
-  // Admin: Create exam (if you need this)
+  // Get result history
+  getResultHistory: () => api.get("/results/history"),
+
+  // Get progress analytics (NEW)
+  getProgressAnalytics: () => api.get("/progress/my-progress"),
+
+  // Get study time analytics (NEW)
+  getStudyTimeAnalytics: () => api.get("/progress/my-study-time"),
+
+  // Get achievements (NEW)
+  getMyAchievements: () => api.get("/progress/my-achievements"),
+
+  // Get leaderboard (NEW)
+  getLeaderboard: () => api.get("/progress/leaderboard"),
+
+  // Admin: Create exam
   createExam: (examData) => api.post("/exams", examData),
 
   // Admin: Update exam

@@ -9,7 +9,7 @@ import {
 import {
   calculateRank,
   recalculateExamRankings,
-} from "../services/rankingService.js"; // UPDATED IMPORT
+} from "../services/rankingService.js";
 import {
   calculateRemainingTime,
   shouldAutoSubmit,

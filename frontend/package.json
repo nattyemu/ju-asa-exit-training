@@ -29,6 +29,7 @@
     "react-router-dom": "^7.1.5",
     "react-scroll": "^1.9.2",
     "react-tabs": "^6.1.0",
+    "recharts": "^3.6.0",
     "tabler-icons-react": "^1.56.0"
   },
   "devDependencies": {
