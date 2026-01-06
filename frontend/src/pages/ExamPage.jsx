@@ -56,6 +56,7 @@ export const ExamPage = () => {
   const hasLoadedRef = useRef(false);
   const saveAnswerDebounceRef = useRef(null);
   const mountedRef = useRef(false);
+  const isNavigatingRef = useRef(false);
 
   // Get current question safely
   const currentQuestion = questions?.[currentQuestionIndex];
@@ -74,39 +75,60 @@ export const ExamPage = () => {
   // Handle exam time up
   const handleExamTimeUp = useCallback(async () => {
     if (
-      !currentSession?.id ||
       timeExpiredToastShown.current ||
-      isSubmittingRef.current
-    )
+      isSubmittingRef.current ||
+      !currentSession?.id
+    ) {
       return;
+    }
 
     try {
       timeExpiredToastShown.current = true;
+      isSubmittingRef.current = true;
 
-      // Show ONE toast with loading state
-      const loadingToast = toast.loading("Exam time expired. Submitting...");
-
-      // Clear all pending operations
+      // Clear any pending saves
       if (saveAnswerDebounceRef.current) {
         clearTimeout(saveAnswerDebounceRef.current);
       }
 
-      // Save any pending answers first
+      // Show only ONE toast
+      const loadingToast = toast.loading("Exam time expired. Submitting...");
+
+      // Save all answers first
       await saveAllAnswers();
 
-      const result = await handleAutoSubmit();
+      // Submit exam with auto-submit flag
+      const result = await submitExam(true); // Pass true for auto-submit
 
-      if (result.success) {
-        toast.success("Exam auto-submitted successfully", { id: loadingToast });
-        // Navigation happens in handleAutoSubmit
+      if (result.success || result.redirect) {
+        toast.success("Exam submitted successfully", { id: loadingToast });
+
+        // CLEAR ALL STATES BEFORE NAVIGATION
+        if (cancelExam) {
+          await cancelExam(); // This clears the context state
+        }
+
+        // Add a small delay for state to clear
+        setTimeout(() => {
+          navigate(`/results/${examId}`, { replace: true });
+        }, 500);
       } else {
-        toast.error("Failed to auto-submit", { id: loadingToast });
+        toast.error(result.message || "Failed to submit", { id: loadingToast });
       }
     } catch (error) {
       console.error("Time up handler error:", error);
-      toast.error("Failed to submit exam");
+      toast.error("Failed to auto-submit exam");
+    } finally {
+      isSubmittingRef.current = false;
     }
-  }, [currentSession, handleAutoSubmit]);
+  }, [
+    currentSession,
+    submitExam,
+    cancelExam,
+    saveAllAnswers,
+    examId,
+    navigate,
+  ]);
 
   // Main exam loading logic - FIXED DEPENDENCIES
   useEffect(() => {
@@ -227,7 +249,19 @@ export const ExamPage = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [currentSession, saveAllAnswers]);
+  useEffect(() => {
+    return () => {
+      // Cleanup on component unmount
+      if (saveAnswerDebounceRef.current) {
+        clearTimeout(saveAnswerDebounceRef.current);
+      }
 
+      // Clear any pending operations
+      if (isSubmittingRef.current) {
+        console.log("Component unmounting while submitting...");
+      }
+    };
+  }, []);
   const handleAnswerSelect = async (chosenAnswer) => {
     if (!currentSession?.id || !currentQuestion || examExpired) {
       return;
@@ -302,14 +336,18 @@ export const ExamPage = () => {
 
   // Update handleSubmitExam:
   const handleSubmitExam = async () => {
-    if (!currentSession?.id || isSubmittingRef.current) {
+    if (
+      !currentSession?.id ||
+      isSubmittingRef.current ||
+      isNavigatingRef.current
+    ) {
       return;
     }
 
     try {
       isSubmittingRef.current = true;
+      isNavigatingRef.current = true;
 
-      // Show ONE loading toast
       const loadingToast = toast.loading("Submitting exam...");
 
       // Clear any pending saves
@@ -317,46 +355,33 @@ export const ExamPage = () => {
         clearTimeout(saveAnswerDebounceRef.current);
       }
 
-      // Save all answers
-      const saveResult = await saveAllAnswers();
-      if (!saveResult.success && saveResult.message !== "No answers to save") {
-        toast.error("Failed to save answers before submit", {
-          id: loadingToast,
-        });
-        return;
-      }
-
-      // Submit exam
       const result = await submitExam();
 
-      if (result.success) {
+      if (result.success || result.redirect || result.alreadySubmitted) {
         toast.success("Exam submitted successfully!", { id: loadingToast });
-        navigate(`/results/${examId}`);
-      } else if (result.redirect) {
-        navigate(`/results/${examId}`);
+
+        // Clear context state
+        if (cancelExam) {
+          await cancelExam();
+        }
+
+        // Navigate with replace to prevent going back
+        navigate(`/results/${examId}`, { replace: true });
       } else {
         toast.error(result.message || "Failed to submit exam", {
           id: loadingToast,
         });
+        isNavigatingRef.current = false;
       }
     } catch (error) {
       console.error("Submit exam error:", error);
-
-      if (error.response?.status === 400) {
-        if (error.response.data.message?.includes("already submitted")) {
-          toast.success("Exam already submitted!");
-          navigate(`/results/${examId}`);
-          return;
-        }
-      }
-
       toast.error("Failed to submit exam. Please try again.");
+      isNavigatingRef.current = false;
     } finally {
       isSubmittingRef.current = false;
       setShowConfirmSubmit(false);
     }
   };
-
   const handleCancelExam = async () => {
     if (!currentSession?.id || examContextLoading) return;
 

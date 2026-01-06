@@ -29,10 +29,14 @@ export const Timer = ({
       setTime((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
+
+          // Add a small debounce to prevent multiple calls
           if (onTimeUp && !hasCalledTimeUp.current) {
             hasCalledTimeUp.current = true;
-            console.log("Timer: Time is up");
-            onTimeUp(); // This should trigger only ONCE
+            setTimeout(() => {
+              console.log("Timer: Calling onTimeUp");
+              onTimeUp();
+            }, 100); // Small delay
           }
           return 0;
         }
