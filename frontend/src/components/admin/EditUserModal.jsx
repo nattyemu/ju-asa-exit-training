@@ -1,60 +1,78 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   User,
   Mail,
-  Lock,
   GraduationCap,
   Building,
   Calendar,
-  Eye,
-  EyeOff,
   Upload,
   Loader2,
   Trash2,
 } from "lucide-react";
-import { profileService } from "../../services/profileService";
 import toast from "react-hot-toast";
 
-export const RegisterStudentModal = ({ onClose, onSubmit }) => {
+export const EditUserModal = ({ user, onClose, onSubmit }) => {
   const currentYear = new Date().getFullYear();
   const maxYear = currentYear + 4;
   const minYear = currentYear;
 
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
     fullName: "",
-    department: "Architecture", // Fixed for students
-    university: "Jimma University", // Fixed
+    department: "",
+    university: "Jimma University",
     year: currentYear,
-    role: "STUDENT", // Always student
-    profileImageUrl: "", // Store URL instead of file
+    profileImageUrl: "",
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  // Initialize form with user data
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.profile?.fullName || "",
+        department: user.profile?.department || "Architecture",
+        university: user.profile?.university || "Jimma University",
+        year: user.profile?.year || currentYear,
+        profileImageUrl: user.profile?.profileImageUrl || "",
+      });
+
+      if (user.profile?.profileImageUrl) {
+        const backendUrl =
+          import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+        const imageUrl = user.profile.profileImageUrl.startsWith("http")
+          ? user.profile.profileImageUrl
+          : backendUrl +
+            (user.profile.profileImageUrl.startsWith("/") ? "" : "/") +
+            user.profile.profileImageUrl;
+        setImagePreview(imageUrl);
+      }
+    }
+  }, [user]);
+
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email.trim()) newErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-      newErrors.email = "Invalid email format";
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
 
-    if (!formData.password.trim()) newErrors.password = "Password is required";
-    else if (formData.password.length < 6)
-      newErrors.password = "Password must be at least 6 characters";
+    if (!formData.department.trim()) {
+      newErrors.department = "Department is required";
+    }
 
-    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
+    if (!formData.university.trim()) {
+      newErrors.university = "University is required";
+    }
 
-    // Validate year range
-    if (!formData.year) newErrors.year = "Year is required";
-    else if (formData.year < minYear || formData.year > maxYear) {
+    if (!formData.year) {
+      newErrors.year = "Year is required";
+    } else if (formData.year < minYear || formData.year > maxYear) {
       newErrors.year = `Year must be between ${minYear} and ${maxYear}`;
     }
 
@@ -91,7 +109,7 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
   const removeImage = () => {
     setSelectedImageFile(null);
     setImagePreview("");
-    setFormData({ ...formData, profileImageUrl: "" });
+    setFormData((prev) => ({ ...prev, profileImageUrl: "" }));
   };
 
   const handleSubmit = async (e) => {
@@ -101,48 +119,19 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
 
     setIsSubmitting(true);
     try {
-      // Upload image first if selected
-      let profileImageUrl = formData.profileImageUrl;
+      // Determine department based on role
+      const finalDepartment =
+        user.role === "ADMIN" ? "Administrator" : "Architecture";
 
-      if (selectedImageFile) {
-        setIsUploadingImage(true);
-        try {
-          const uploadResponse = await profileService.uploadProfileImage(
-            selectedImageFile
-          );
-          if (uploadResponse.success && uploadResponse.url) {
-            profileImageUrl = uploadResponse.url;
-          } else {
-            toast.error("Failed to upload image");
-            return;
-          }
-        } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
-          toast.error("Failed to upload image. Please try again.");
-          return;
-        } finally {
-          setIsUploadingImage(false);
-        }
-      }
-
-      // Prepare registration data with fixed values
-      const registrationData = {
-        email: formData.email,
-        password: formData.password,
-        fullName: formData.fullName,
-        department: "Architecture", // Always Architecture for students
-        university: "Jimma University", // Always Jimma University
-        year: formData.year,
-        role: "STUDENT", // Always student for registration
-        profileImageUrl: profileImageUrl || null,
+      const updateData = {
+        ...formData,
+        department: finalDepartment, // Auto-set based on role
       };
 
-      await onSubmit(registrationData);
+      await onSubmit(updateData);
     } catch (error) {
-      console.error("Registration failed:", error);
-      if (error.response?.data?.message?.includes("already registered")) {
-        setErrors({ email: "Email already registered" });
-      }
+      console.error("Failed to update user:", error);
+      toast.error(error.response?.data?.message || "Failed to update user");
     } finally {
       setIsSubmitting(false);
     }
@@ -155,10 +144,6 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
   const isSubmitDisabled = isSubmitting || isUploadingImage;
 
   return (
@@ -169,11 +154,18 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-text-primary">
-                Register Student
+                Edit User Profile
               </h2>
-              <p className="text-sm text-text-secondary mt-1">
-                Create a new student account
-              </p>
+              <p className="text-sm text-text-secondary mt-1">{user?.email}</p>
+              <div
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mt-2 ${
+                  user?.role === "ADMIN"
+                    ? "bg-purple-100 text-purple-800"
+                    : "bg-blue-100 text-blue-800"
+                }`}
+              >
+                {user?.role}
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -242,7 +234,7 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
                     ) : (
                       <>
                         <Upload className="w-4 h-4" />
-                        <span>Choose Photo</span>
+                        <span>Change Photo</span>
                       </>
                     )}
                   </div>
@@ -253,65 +245,17 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
               </div>
             </div>
 
-            {/* Email */}
+            {/* Email (Read-only) */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
-                  Email Address *
+                  Email Address
                 </div>
               </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.email ? "border-red-300" : "border-border"
-                }`}
-                placeholder="student@jimma.edu.et"
-                disabled={isSubmitting}
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password with show/hide */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Password *
-                </div>
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all pr-12 ${
-                    errors.password ? "border-red-300" : "border-border"
-                  }`}
-                  placeholder="At least 6 characters"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-primary transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  disabled={isSubmitting}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
+              <div className="w-full px-4 py-3 border border-border rounded-lg bg-gray-50 text-text-primary">
+                {user?.email}
               </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
             </div>
 
             {/* Full Name */}
@@ -337,34 +281,36 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
               )}
             </div>
 
-            {/* Fixed Department and University - Display only */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4" />
-                    Department
-                  </div>
-                </label>
-                <div className="w-full px-4 py-3 border border-border rounded-lg bg-gray-50 text-text-primary">
-                  Architecture
+            {/* Department (Read-only, based on role) */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  Department
                 </div>
+              </label>
+              <div className="w-full px-4 py-3 border border-border rounded-lg bg-gray-50 text-text-primary">
+                {user?.role === "ADMIN" ? "Administrator" : "Architecture"}
               </div>
+              <p className="text-xs text-text-secondary mt-2">
+                Department is automatically set based on user role
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  <div className="flex items-center gap-2">
-                    <Building className="w-4 h-4" />
-                    University
-                  </div>
-                </label>
-                <div className="w-full px-4 py-3 border border-border rounded-lg bg-gray-50 text-text-primary">
-                  Jimma University
+            {/* University (Fixed) */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4" />
+                  University
                 </div>
+              </label>
+              <div className="w-full px-4 py-3 border border-border rounded-lg bg-gray-50 text-text-primary">
+                Jimma University
               </div>
             </div>
 
-            {/* Year - Changed to actual year selection */}
+            {/* Year */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
                 <div className="flex items-center gap-2">
@@ -421,10 +367,10 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
               ) : isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Registering...
+                  Updating...
                 </>
               ) : (
-                "Register Student"
+                "Update Profile"
               )}
             </button>
           </div>

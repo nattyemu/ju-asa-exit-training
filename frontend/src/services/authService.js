@@ -37,7 +37,6 @@ export const authService = {
       };
     }
   },
-
   logout: () => {
     try {
       localStorage.removeItem("token");

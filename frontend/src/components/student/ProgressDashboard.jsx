@@ -18,7 +18,6 @@ import {
   User,
   Crown,
   Medal,
-  Maximize2,
   ChevronRight,
 } from "lucide-react";
 import { examService } from "../../services/examService";
@@ -721,9 +720,6 @@ export const ProgressDashboard = () => {
                                         className="w-full h-full object-cover"
                                         onError={handleImageError}
                                       />
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                                        <Maximize2 className="w-5 h-5 text-white" />
-                                      </div>
                                     </>
                                   ) : (
                                     <div className="w-full h-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">

@@ -32,7 +32,9 @@ export const adminService = {
   getAllUsers: (page = 1, limit = 10) =>
     api.get(`/user?page=${page}&limit=${limit}`),
 
-  updateUserRole: (userId, role) => api.put(`/user/${userId}/role`, { role }),
+  updateUserRole: (userId, roleData) => {
+    return api.put(`/user/${userId}/role`, roleData);
+  },
 
   deactivateUser: (userId) => api.put(`/user/${userId}`),
 
@@ -51,7 +53,8 @@ export const adminService = {
 
   getScoreDistribution: (examId) =>
     api.get(`/analytics/exam/${examId}/score-distribution`),
-
+  updateUserProfile: (userId, profileData) =>
+    api.put(`/user/${userId}/profile`, profileData),
   getQuestionAnalysis: (examId) =>
     api.get(`/analytics/exam/${examId}/question-analysis`),
 

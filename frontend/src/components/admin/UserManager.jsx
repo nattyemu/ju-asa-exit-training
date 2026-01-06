@@ -15,10 +15,13 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { adminService } from "../../services/adminService";
+import { authService } from "../../services/authService"; // ADD THIS IMPORT
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { RegisterStudentModal } from "./RegisterStudentModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
-import { ImageModal } from "../common/ImageModal"; // Import the ImageModal
+import { ImageModal } from "../common/ImageModal";
+import { EditUserModal } from "./EditUserModal";
+import { PasswordVerificationModal } from "./PasswordVerificationModal"; // ADD THIS IMPORT
 import toast from "react-hot-toast";
 
 export const UserManager = () => {
@@ -26,7 +29,11 @@ export const UserManager = () => {
   const [loading, setLoading] = useState(true);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false); // NEW
   const [selectedUser, setSelectedUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [passwordAction, setPasswordAction] = useState(null); // NEW: "make-admin" or "make-student"
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [pagination, setPagination] = useState({
@@ -36,7 +43,6 @@ export const UserManager = () => {
     pages: 0,
   });
 
-  // NEW: State for image modal
   const [imageModal, setImageModal] = useState({
     isOpen: false,
     imageUrl: null,
@@ -113,14 +119,40 @@ export const UserManager = () => {
     }
   };
 
-  const handleUpdateRole = async (userId, newRole) => {
+  // REMOVE OLD handleUpdateRole FUNCTION
+
+  // NEW: Handle role change with password verification
+  const handleRoleChangeClick = (user, action) => {
+    setSelectedUser(user);
+    setPasswordAction(action);
+    setShowPasswordModal(true);
+  };
+
+  const handleVerifiedRoleChange = async (adminPassword) => {
     try {
-      await adminService.updateUserRole(userId, newRole);
-      toast.success(`User role updated to ${newRole}`);
+      const newRole = passwordAction === "make-admin" ? "ADMIN" : "STUDENT";
+
+      // Prepare role data
+      const roleData = {
+        role: newRole,
+        adminPassword: adminPassword,
+      };
+
+      // Only add department when changing to STUDENT
+      if (newRole === "STUDENT") {
+        roleData.department = "Architecture";
+      }
+
+      await adminService.updateUserRole(selectedUser.id, roleData);
+
       loadUsers();
+      setShowPasswordModal(false);
+      setSelectedUser(null);
+      setPasswordAction(null);
     } catch (error) {
       console.error("Failed to update role:", error);
-      toast.error(error.response?.data?.message || "Failed to update role");
+
+      throw error; // Re-throw to let modal handle error
     }
   };
 
@@ -138,18 +170,36 @@ export const UserManager = () => {
     }
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (userData) => {
+    try {
+      await adminService.updateUserProfile(editingUser.id, userData);
+      toast.success("User profile updated successfully");
+      loadUsers();
+      setShowEditModal(false);
+      setEditingUser(null);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to update user profile"
+      );
+    }
+  };
+
   // Get profile image URL function
   const getProfileImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
 
-    // If it's already a full URL, return as is
     if (imageUrl.startsWith("http")) return imageUrl;
     if (imageUrl.startsWith("blob:")) return imageUrl;
 
     const backendUrl =
       import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
-    // Ensure the URL starts with a slash
     if (!imageUrl.startsWith("/")) {
       imageUrl = "/" + imageUrl;
     }
@@ -157,7 +207,6 @@ export const UserManager = () => {
     return backendUrl + imageUrl;
   };
 
-  // Handle image error
   const handleImageError = (e) => {
     e.target.style.display = "none";
     const fallbackElement = e.target.nextElementSibling;
@@ -166,7 +215,6 @@ export const UserManager = () => {
     }
   };
 
-  // NEW: Function to open image modal
   const openImageModal = (imageUrl, altText) => {
     setImageModal({
       isOpen: true,
@@ -175,7 +223,6 @@ export const UserManager = () => {
     });
   };
 
-  // NEW: Function to close image modal
   const closeImageModal = () => {
     setImageModal({
       isOpen: false,
@@ -385,7 +432,6 @@ export const UserManager = () => {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        {/* Profile Image Container - Clickable */}
                         <div
                           className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer hover:scale-105 transition-transform duration-200"
                           onClick={() => {
@@ -483,6 +529,15 @@ export const UserManager = () => {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
+                      >
+                        <Edit className="w-3 h-3" />
+                        Edit
+                      </button>
+
                       {/* Change Password Button */}
                       <button
                         onClick={() => handleChangePassword(user)}
@@ -492,17 +547,21 @@ export const UserManager = () => {
                         Password
                       </button>
 
-                      {/* Role Change Buttons */}
+                      {/* Make Admin Button (only for non-admins) */}
                       {user.role !== "ADMIN" ? (
                         <button
-                          onClick={() => handleUpdateRole(user.id, "ADMIN")}
+                          onClick={() =>
+                            handleRoleChangeClick(user, "make-admin")
+                          }
                           className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors"
                         >
                           Make Admin
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleUpdateRole(user.id, "STUDENT")}
+                          onClick={() =>
+                            handleRoleChangeClick(user, "make-student")
+                          }
                           className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
                         >
                           Make Student
@@ -596,6 +655,32 @@ export const UserManager = () => {
         <RegisterStudentModal
           onClose={() => setShowRegisterModal(false)}
           onSubmit={handleRegisterStudent}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+          }}
+          onSubmit={handleUpdateUser}
+        />
+      )}
+
+      {/* Password Verification Modal */}
+      {showPasswordModal && selectedUser && passwordAction && (
+        <PasswordVerificationModal
+          user={selectedUser}
+          action={passwordAction}
+          onClose={() => {
+            setShowPasswordModal(false);
+            setSelectedUser(null);
+            setPasswordAction(null);
+          }}
+          onVerified={handleVerifiedRoleChange}
         />
       )}
 
