@@ -6,6 +6,7 @@ import {
   getAllUsers,
   updateUserRole,
   deactivateUser,
+  updateUserProfile,
 } from "../controllers/userController.js";
 import { authenticate, authorize } from "../middleware/authenticate.js";
 import {
@@ -24,6 +25,7 @@ router.put("/profile", generalLimiter, updateProfile);
 router.put("/change-password", changePasswordLimiter, changePassword);
 
 // Admin only routes
+router.put("/:id/profile", authorize("ADMIN"), updateUserProfile);
 router.get("/", authorize("ADMIN"), getAllUsers);
 router.put("/:id/role", authorize("ADMIN"), updateUserRole);
 router.put("/:id", authorize("ADMIN"), deactivateUser);

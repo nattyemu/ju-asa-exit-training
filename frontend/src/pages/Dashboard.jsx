@@ -650,31 +650,6 @@ export const Dashboard = () => {
                     </button>
                   </div>
                 </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-xl border border-border p-6">
-                  <h3 className="text-lg font-bold text-text-primary mb-4">
-                    Recent Activity
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Plus className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-text-primary">
-                          No recent activity
-                        </div>
-                        <div className="text-xs text-text-secondary">
-                          Activity will appear here
-                        </div>
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        Just now
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-border p-6 shadow-sm">

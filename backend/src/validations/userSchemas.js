@@ -65,13 +65,22 @@ export const changePasswordSchema = z.object({
 });
 
 export const updateUserRoleSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, "User ID must be a number"),
+  }),
   body: z.object({
-    role: z.enum(["STUDENT", "ADMIN"], {
-      errorMap: () => ({ message: "Role must be STUDENT or ADMIN" }),
+    role: z.enum(["ADMIN", "STUDENT"], {
+      required_error: "Role is required",
+      invalid_type_error: "Role must be either ADMIN or STUDENT",
     }),
+    department: z.string().optional(),
+    adminPassword: z
+      .string({
+        required_error: "Admin password is required",
+      })
+      .min(1, "Admin password is required"),
   }),
 });
-
 const formatZodError = (error) => {
   if (error.issues && error.issues.length > 0) {
     const fields = new Set();

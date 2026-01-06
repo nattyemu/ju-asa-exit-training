@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { users, profiles } from "../db/schema.js";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { hashPassword } from "../utils/auth.js";
+import { comparePassword, hashPassword } from "../utils/auth.js";
 import { count } from "drizzle-orm";
 import {
   updateProfileSchema,
@@ -471,32 +471,64 @@ export const getAllUsers = async (req, res) => {
 
 export const updateUserRole = async (req, res) => {
   try {
-    const validationResult = updateUserRoleSchema.safeParse(req);
+    const userId = parseInt(req.params.id);
+    const { role, department, adminPassword } = req.body;
+    const currentUserId = req.user.userId;
 
-    if (!validationResult.success) {
+    // Validate input
+    if (!role || !["ADMIN", "STUDENT"].includes(role)) {
       return res.status(400).json({
         success: false,
-        error: formatZodError(validationResult.error),
+        message: "Valid role (ADMIN or STUDENT) is required",
       });
     }
 
-    const userId = parseInt(req.params.id);
-    const { role } = req.body;
-    const currentUserId = req.user.userId;
+    if (!adminPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin password is required for role change",
+      });
+    }
 
-    const userData = await db
+    // Verify admin password
+    const [adminData] = await db
       .select()
       .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+      .where(eq(users.id, currentUserId));
 
-    if (userData.length === 0) {
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    const isPasswordValid = await comparePassword(
+      adminPassword,
+      adminData.password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin password",
+      });
+    }
+
+    // Check if target user exists
+    const [userData] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!userData) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
+    // Prevent self-role change
     if (userId === currentUserId) {
       return res.status(400).json({
         success: false,
@@ -504,18 +536,74 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
+    // Determine department based on role
+    let newDepartment;
+    if (role === "ADMIN") {
+      newDepartment = "Administrator";
+    } else if (role === "STUDENT") {
+      if (!department || department.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Department is required when changing to STUDENT role",
+        });
+      }
+      newDepartment = department.trim();
+    }
+
+    // Update user role
     await db.update(users).set({ role }).where(eq(users.id, userId));
+
+    // Update or create profile with new department
+    const [existingProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+
+    if (existingProfile) {
+      await db
+        .update(profiles)
+        .set({
+          department: newDepartment,
+          // If changing to admin, also update full name if needed
+          ...(role === "ADMIN" && !existingProfile.fullName
+            ? {
+                fullName: userData.email.split("@")[0],
+              }
+            : {}),
+        })
+        .where(eq(profiles.userId, userId));
+    } else {
+      // Create profile if doesn't exist
+      await db.insert(profiles).values({
+        userId: userId,
+        fullName: userData.email.split("@")[0] || "User",
+        department: newDepartment,
+        university: "Jimma University",
+        year: new Date().getFullYear(),
+        profileImageUrl: null,
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "User role updated successfully",
+      message: `User role updated to ${role} successfully`,
+      data: {
+        newRole: role,
+        newDepartment: newDepartment,
+      },
     });
   } catch (error) {
-    console.error("Update user role error:", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        success: false,
+        message: "Profile already exists for this user",
+      });
+    }
 
     return res.status(500).json({
       success: false,
       message: "Failed to update user role",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -658,5 +746,154 @@ export const deleteUserProfile = async (userId) => {
       message: "Failed to delete profile",
       error: error.message,
     };
+  }
+};
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    if (isNaN(userId) || userId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    // Check if user exists
+    const [userData] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const { fullName, year, profileImageUrl } = req.body;
+
+    // Determine department based on user role
+    let department = req.body.department;
+    if (!department) {
+      department = userData.role === "ADMIN" ? "Administrator" : "Architecture";
+    }
+
+    // University is fixed for now
+    const university = "Jimma University";
+
+    // Validate required fields
+    if (!fullName || !fullName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name is required",
+      });
+    }
+
+    if (!year || year < 2020 || year > 2030) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid year is required",
+      });
+    }
+
+    // Check if profile exists
+    const [existingProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+
+    const updateData = {
+      fullName: fullName.trim(),
+      department: department.trim(),
+      university: university.trim(),
+      year: parseInt(year),
+    };
+
+    // Handle profile image
+    if (profileImageUrl !== undefined) {
+      if (profileImageUrl === "" || profileImageUrl === null) {
+        // Delete old image if exists
+        if (existingProfile && existingProfile.profileImageUrl) {
+          const deleteResult = await deleteOldProfileImage(
+            existingProfile.profileImageUrl
+          );
+          if (!deleteResult.success) {
+            console.warn("Failed to delete old image:", deleteResult.message);
+          }
+        }
+        updateData.profileImageUrl = null;
+      } else {
+        updateData.profileImageUrl = profileImageUrl;
+
+        // Delete old image if it's being replaced
+        if (
+          existingProfile &&
+          existingProfile.profileImageUrl &&
+          existingProfile.profileImageUrl !== profileImageUrl
+        ) {
+          const deleteResult = await deleteOldProfileImage(
+            existingProfile.profileImageUrl
+          );
+          if (!deleteResult.success) {
+            console.warn("Failed to delete old image:", deleteResult.message);
+          }
+        }
+      }
+    }
+
+    if (existingProfile) {
+      await db
+        .update(profiles)
+        .set(updateData)
+        .where(eq(profiles.userId, userId));
+    } else {
+      await db.insert(profiles).values({
+        userId: userId,
+        ...updateData,
+      });
+    }
+
+    // Get updated user data
+    const [updatedUser] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+        isActive: users.isActive,
+        profile: {
+          fullName: profiles.fullName,
+          department: profiles.department,
+          university: profiles.university,
+          year: profiles.year,
+          profileImageUrl: profiles.profileImageUrl,
+        },
+      })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .where(eq(users.id, userId));
+
+    return res.status(200).json({
+      success: true,
+      message: "User profile updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update user profile error:", error);
+
+    if (error.code === "ER_DATA_TOO_LONG") {
+      return res.status(400).json({
+        success: false,
+        message: "One or more fields exceed maximum length",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user profile",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
