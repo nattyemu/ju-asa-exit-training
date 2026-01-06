@@ -21,15 +21,9 @@ export const QuestionCard = ({
   const isAnswered = selectedAnswer !== undefined && selectedAnswer !== null;
 
   const handleOptionClick = (optionKey) => {
-    // Disable if time expired or submitting
     if (timeExpired || isSubmitting || !onAnswerSelect) return;
 
-    console.log("QuestionCard: Option selected:", {
-      questionId: question.id,
-      option: optionKey,
-      questionNumber,
-      chosenAnswer: optionKey,
-    });
+    // Call parent handler immediately
     onAnswerSelect(optionKey);
   };
 
@@ -96,16 +90,17 @@ export const QuestionCard = ({
               onClick={() => handleOptionClick(option.key)}
               disabled={timeExpired || isSubmitting}
               className={`w-full text-left p-4 rounded-lg border transition-all duration-200 
-                ${
-                  timeExpired
-                    ? "opacity-60 cursor-not-allowed"
-                    : "hover:scale-[1.02] active:scale-[0.98]"
-                }
-                disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isSelected
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border hover:border-primary/50 hover:bg-primary/2"
-                }`}
+    ${
+      isSelected
+        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+        : "border-border"
+    }
+    ${
+      timeExpired
+        ? "opacity-60 cursor-not-allowed"
+        : "hover:scale-[1.02] cursor-pointer"
+    }
+  `}
             >
               <div className="flex items-start gap-4">
                 <div

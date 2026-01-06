@@ -31,24 +31,13 @@ export const Timer = ({
           clearInterval(timerRef.current);
           if (onTimeUp && !hasCalledTimeUp.current) {
             hasCalledTimeUp.current = true;
-            console.log("Timer: Time is up, calling onTimeUp");
-            onTimeUp();
+            console.log("Timer: Time is up");
+            onTimeUp(); // This should trigger only ONCE
           }
           return 0;
         }
         return prev - 1;
       });
-
-      // Force auto-submit when time is very low (10 seconds)
-      const now = Date.now();
-      if (time <= 10 && now - lastCheckRef.current > 1000) {
-        lastCheckRef.current = now;
-        if (onTimeUp && !hasCalledTimeUp.current) {
-          console.log(`Timer: Only ${time} seconds left, forcing onTimeUp`);
-          hasCalledTimeUp.current = true;
-          onTimeUp();
-        }
-      }
     }, 1000);
 
     return () => {

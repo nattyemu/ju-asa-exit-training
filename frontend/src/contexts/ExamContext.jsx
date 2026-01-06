@@ -28,6 +28,7 @@ export const ExamProvider = ({ children }) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [needsAutoSubmit, setNeedsAutoSubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
   // Load answers from localStorage on mount
@@ -304,19 +305,13 @@ export const ExamProvider = ({ children }) => {
   };
 
   const handleAutoSubmit = async () => {
-    if (!currentSession || !currentExam) return;
+    if (!currentSession || !currentExam || isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       const response = await examService.submitExam(currentSession.id, true);
       if (response.data.success) {
-        // Clear exam state
         clearExamState();
-
-        toast.success("Exam auto-submitted due to time expiration");
-
-        // Clear localStorage backup
-        localStorage.removeItem("exam_answers_backup");
-
         return { success: true, data: response.data.data };
       }
       return { success: false, message: response.data.message };
@@ -326,14 +321,21 @@ export const ExamProvider = ({ children }) => {
         success: false,
         message: error.response?.data?.message || "Auto-submit failed",
       };
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
   const submitExam = async (isAutoSubmit = false) => {
-    if (!currentSession)
-      return { success: false, message: "No active session" };
+    if (!currentSession || isSubmitting) {
+      return {
+        success: false,
+        message: "No active session or already submitting",
+      };
+    }
 
     try {
+      setIsSubmitting(true); // Set submitting flag
+
       // Save any remaining answers first
       await saveAllAnswers();
 
@@ -373,6 +375,8 @@ export const ExamProvider = ({ children }) => {
         success: false,
         message: error.response?.data?.message || "Failed to submit exam",
       };
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -433,6 +437,8 @@ export const ExamProvider = ({ children }) => {
     handleAutoSubmit,
     loadActiveSession,
     hasActiveSession: !!currentSession,
+    setAnswers,
+    isSubmitting,
   };
 
   return <ExamContext.Provider value={value}>{children}</ExamContext.Provider>;
