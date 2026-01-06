@@ -20,6 +20,7 @@ import {
   Send,
   TrendingUp,
   Edit,
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -37,7 +38,7 @@ export const Dashboard = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-
+  const [isStartingExam, setIsStartingExam] = useState(false);
   useEffect(() => {
     if (user?.role === "STUDENT") {
       loadExams();
@@ -45,7 +46,16 @@ export const Dashboard = () => {
       loadAdminStats();
     }
   }, [user]);
-
+  const formatRank = (rank) => {
+    if (!rank || rank === 0 || rank === "N/A") {
+      return (
+        <span className="flex items-center gap-1">
+          <span>Not Available</span>
+        </span>
+      );
+    }
+    return `#${rank}`;
+  };
   const loadAdminStats = async () => {
     try {
       setIsLoadingStats(true);
@@ -80,6 +90,99 @@ export const Dashboard = () => {
     }
   };
 
+  const handleStartExam = async (exam) => {
+    if (isStartingExam) {
+      toast.info("Please wait, starting exam...");
+      return;
+    }
+
+    setIsStartingExam(true);
+
+    try {
+      // Handle completed exams
+      if (exam.status === "COMPLETED") {
+        navigate(`/results`, {
+          state: {
+            examData: exam,
+            resultData: exam.result,
+          },
+        });
+        return;
+      }
+
+      // Handle in-progress exams
+      if (exam.status === "IN_PROGRESS") {
+        // Check if exam is expired
+        const now = new Date();
+        const availableUntil = new Date(exam.availableUntil);
+
+        if (now > availableUntil) {
+          toast.info("This exam has expired. Showing results...");
+          navigate(`/results`, {
+            state: {
+              examData: exam,
+              resultData: exam.result,
+            },
+          });
+        } else {
+          // Still valid, continue exam
+          navigate(`/exam/${exam.id}`);
+        }
+        return;
+      }
+
+      // NEW EXAM - Start new session
+      console.log("🚀 Dashboard: Starting NEW exam session for exam", exam.id);
+
+      const startResponse = await examService.startExam(exam.id);
+
+      if (startResponse.data.success) {
+        console.log("✅ Dashboard: Exam session started successfully");
+        // Navigate to exam page
+        navigate(`/exam/${exam.id}`);
+      } else {
+        console.error(
+          "❌ Dashboard: Failed to start exam:",
+          startResponse.data.message
+        );
+
+        // Handle specific errors
+        if (startResponse.data.message.includes("already completed")) {
+          toast.error("You have already completed this exam");
+          navigate(`/results/${exam.id}`);
+        } else if (startResponse.data.message.includes("already exists")) {
+          // Session already exists
+          toast.info("Resuming existing session...");
+          navigate(`/exam/${exam.id}`);
+        } else {
+          toast.error(startResponse.data.message || "Failed to start exam");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Dashboard: Error starting exam:", error);
+
+      // Handle 409 (Conflict) - session already exists
+      if (error.response?.status === 409) {
+        toast.info("Resuming existing session...");
+        navigate(`/exam/${exam.id}`);
+        return;
+      }
+
+      // Handle 400 - exam already completed
+      if (
+        error.response?.status === 400 &&
+        error.response.data.message?.includes("already completed")
+      ) {
+        toast.error("You have already completed this exam");
+        navigate(`/results/${exam.id}`);
+        return;
+      }
+
+      toast.error("Failed to start exam. Please try again.");
+    } finally {
+      setIsStartingExam(false);
+    }
+  };
   const loadExams = async () => {
     try {
       setIsLoading(true);
@@ -89,17 +192,13 @@ export const Dashboard = () => {
       }
     } catch (error) {
       console.error("Failed to load exams:", error);
-      toast.error("Failed to load available exams");
+
+      // Don't show toast for 404 - it's normal when no exams
+      if (error.response?.status !== 404) {
+        toast.error("Failed to load available exams");
+      }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleStartExam = (exam) => {
-    if (exam.status === "COMPLETED") {
-      navigate(`/student/results/${exam.id}`);
-    } else {
-      navigate(`/exam/${exam.id}`);
     }
   };
 
@@ -136,6 +235,7 @@ export const Dashboard = () => {
     console.log("Getting profile image URL for:", backendUrl + imageUrl);
     return backendUrl + imageUrl;
   };
+
   // Handle image error - fixed version
   const handleImageError = (e) => {
     e.target.style.display = "none";
@@ -144,6 +244,25 @@ export const Dashboard = () => {
       fallbackElement.style.display = "flex";
     }
   };
+
+  // Calculate student progress stats
+  const calculateStudentStats = () => {
+    const completedExams = exams.filter((e) => e.status === "COMPLETED");
+    const passedExams = completedExams.filter(
+      (e) => e.result?.score >= e.passingScore
+    );
+    const inProgressExams = exams.filter((e) => e.status === "IN_PROGRESS");
+    const availableExams = exams.filter((e) => e.status === "NOT_STARTED");
+
+    return {
+      completed: completedExams.length,
+      passed: passedExams.length,
+      inProgress: inProgressExams.length,
+      available: availableExams.length,
+    };
+  };
+
+  const studentStats = calculateStudentStats();
 
   return (
     <div className="min-h-screen bg-background-light">
@@ -266,7 +385,7 @@ export const Dashboard = () => {
                       <span className="text-sm">My Progress</span>
                     </Link>
                     <Link
-                      to="/student/results"
+                      to="/dashboard"
                       className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <Trophy className="w-5 h-5 text-text-secondary" />
@@ -570,6 +689,46 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Your Progress Stats - Moved to top */}
+                <div className="mb-8">
+                  <h3 className="font-medium text-text-primary mb-4">
+                    Your Progress
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-primary mb-1">
+                        {studentStats.completed}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        Completed
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-yellow-600 mb-1">
+                        {studentStats.inProgress}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        In Progress
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-blue-600 mb-1">
+                        {studentStats.available}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        Available
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background-light rounded-lg border border-border">
+                      <div className="text-lg font-bold text-green-600 mb-1">
+                        {studentStats.passed}
+                      </div>
+                      <div className="text-xs text-text-secondary">Passed</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Exams List */}
                 {isLoading ? (
                   <div className="py-12 text-center">
                     <LoadingSpinner size="lg" />
@@ -582,6 +741,7 @@ export const Dashboard = () => {
                         key={exam.id}
                         exam={exam}
                         onStart={handleStartExam}
+                        isStarting={isStartingExam}
                       />
                     ))}
                   </div>
@@ -599,67 +759,12 @@ export const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Stats Section */}
-                <div className="mt-8 pt-6 border-t border-border">
-                  <h3 className="font-medium text-text-primary mb-4">
-                    Your Progress
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-3 bg-background-light rounded-lg border border-border">
-                      <div className="text-lg font-bold text-primary mb-1">
-                        {exams.filter((e) => e.status === "COMPLETED").length}
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        Completed
-                      </div>
-                    </div>
-                    <div className="p-3 bg-background-light rounded-lg border border-border">
-                      <div className="text-lg font-bold text-yellow-600 mb-1">
-                        {exams.filter((e) => e.status === "IN_PROGRESS").length}
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        In Progress
-                      </div>
-                    </div>
-                    <div className="p-3 bg-background-light rounded-lg border border-border">
-                      <div className="text-lg font-bold text-blue-600 mb-1">
-                        {exams.filter((e) => e.status === "NOT_STARTED").length}
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        Available
-                      </div>
-                    </div>
-                    <div className="p-3 bg-background-light rounded-lg border border-border">
-                      <div className="text-lg font-bold text-green-600 mb-1">
-                        {
-                          exams.filter((e) => e.result?.score >= e.passingScore)
-                            .length
-                        }
-                      </div>
-                      <div className="text-xs text-text-secondary">Passed</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Quick Review Section - Only for students with completed exams */}
-            {user?.role === "STUDENT" &&
-              exams.filter((e) => e.status === "COMPLETED").length > 0 && (
-                <div className="mt-8">
-                  <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-text-primary">
-                        Recent Exam Review
-                      </h3>
-                      <button
-                        className="text-sm text-primary hover:text-primary-dark font-medium"
-                        onClick={() => navigate("/student/results")}
-                      >
-                        View All Results →
-                      </button>
-                    </div>
-
+                {/* Completed Exams Review Section */}
+                {studentStats.completed > 0 && (
+                  <div className="mt-8 pt-6 border-t border-border">
+                    <h3 className="text-lg font-bold text-text-primary mb-4">
+                      Recently Completed Exams
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {exams
                         .filter((e) => e.status === "COMPLETED")
@@ -674,37 +779,68 @@ export const Dashboard = () => {
                                 {exam.title}
                               </h4>
                               <span
-                                className={`px-2 py-1 text-xs font-medium rounded ${
+                                className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${
                                   exam.result?.score >= exam.passingScore
                                     ? "bg-green-100 text-green-800"
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
+                                {exam.result?.score >= exam.passingScore ? (
+                                  <CheckCircle className="w-3 h-3" />
+                                ) : (
+                                  <XCircle className="w-3 h-3" />
+                                )}
                                 {exam.result?.score || 0}%
                               </span>
                             </div>
-                            <div className="text-sm text-text-secondary mb-4">
-                              {exam.result?.submittedAt
-                                ? `Completed: ${format(
-                                    new Date(exam.result.submittedAt),
-                                    "MMM d, yyyy"
-                                  )}`
-                                : "Completion date not available"}
+
+                            <div className="flex items-center gap-4 mb-4 text-sm">
+                              <div className="flex items-center gap-1">
+                                <BookOpen className="w-4 h-4 text-text-secondary" />
+                                <span>{exam.totalQuestions} Questions</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Award className="w-4 h-4 text-text-secondary" />
+                                <span>{formatRank(exam.result?.rank)}</span>
+                              </div>
                             </div>
+
+                            <div className="space-y-2 mb-4">
+                              <div
+                                className={`text-sm font-medium ${
+                                  exam.result?.score >= exam.passingScore
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {exam.result?.score >= exam.passingScore
+                                  ? "PASSED"
+                                  : "FAILED"}
+                              </div>
+                              <div className="text-xs text-text-secondary">
+                                Score: {exam.result?.score}% • Required:{" "}
+                                {exam.passingScore}%
+                              </div>
+                              {exam.result?.rank && (
+                                <div className="text-xs text-text-secondary">
+                                  Achieved Rank: #{exam.result.rank}
+                                </div>
+                              )}
+                            </div>
+
                             <button
-                              onClick={() =>
-                                navigate(`/student/results/${exam.id}`)
-                              }
+                              onClick={() => handleStartExam(exam)}
                               className="w-full py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors text-sm font-medium"
                             >
-                              View Detailed Results
+                              Review Exam Details
                             </button>
                           </div>
                         ))}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>

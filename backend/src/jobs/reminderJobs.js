@@ -1,8 +1,5 @@
 import cron from "node-cron";
-import {
-  sendExamReminders,
-  sendDeadlineWarnings,
-} from "../services/notificationService.js";
+import { sendExamReminders } from "../services/notificationService.js";
 import { db } from "../db/connection.js";
 
 /**
@@ -11,7 +8,7 @@ import { db } from "../db/connection.js";
 export const scheduleNotificationJobs = () => {
   console.log("📅 Scheduling notification jobs...");
 
-  // 1. Daily exam reminders at 9 AM
+  // 1. Daily exam reminders at 9 AM (for exams starting in next 24 hours)
   cron.schedule("0 9 * * *", async () => {
     console.log("⏰ Running daily exam reminders...");
     try {
@@ -24,18 +21,7 @@ export const scheduleNotificationJobs = () => {
     }
   });
 
-  // 2. Hourly deadline warnings
-  cron.schedule("0 * * * *", async () => {
-    console.log("⏳ Running deadline warnings...");
-    try {
-      const result = await sendDeadlineWarnings();
-      console.log(
-        `⚠️ Sent ${result.data?.totalWarningsSent || 0} deadline warnings`
-      );
-    } catch (error) {
-      console.error("❌ Deadline warnings job failed:", error.message);
-    }
-  });
+  // 2. Removed: Hourly deadline warnings (replaced with manual unstarted exam reminders)
 
   // 3. Cleanup job - log sent notifications (weekly)
   cron.schedule("0 0 * * 0", async () => {
@@ -50,8 +36,8 @@ export const scheduleNotificationJobs = () => {
 
   console.log("✅ Notification jobs scheduled successfully");
   console.log("   - Daily exam reminders: 9:00 AM");
-  console.log("   - Hourly deadline warnings: Every hour");
   console.log("   - Weekly cleanup: Sunday midnight");
+  console.log("   - Unstarted exam reminders: Manual only (admin triggered)");
 };
 
 // Export for manual triggering
@@ -59,12 +45,9 @@ export const runManualExamReminders = async () => {
   return await sendExamReminders();
 };
 
-export const runManualDeadlineWarnings = async () => {
-  return await sendDeadlineWarnings();
-};
+// Removed: runManualDeadlineWarnings export
 
 export default {
   scheduleNotificationJobs,
   runManualExamReminders,
-  runManualDeadlineWarnings,
 };

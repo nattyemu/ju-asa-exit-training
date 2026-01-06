@@ -2,9 +2,10 @@ import express from "express";
 import { authenticate, authorize } from "../middleware/authenticate.js";
 import {
   sendExamRemindersController,
-  sendDeadlineWarningsController,
   sendSystemAnnouncementController,
   getNotificationPreferencesController,
+  sendUnstartedExamRemindersController,
+  getUnstartedExamStatsController,
 } from "../controllers/notificationController.js";
 
 const router = express.Router();
@@ -44,14 +45,17 @@ router.post("/reminders/exam/:examId", authorize("ADMIN"), async (req, res) => {
     });
   }
 });
-
 router.post(
-  "/reminders/deadline",
+  "/reminders/unstarted/:examId",
   authorize("ADMIN"),
-  sendDeadlineWarningsController
+  sendUnstartedExamRemindersController
 );
-
+// Get unstarted exam statistics
+router.get(
+  "/unstarted-stats",
+  authorize("ADMIN"),
+  getUnstartedExamStatsController
+);
 // User routes
 router.get("/preferences/:userId", getNotificationPreferencesController);
-
 export default router;

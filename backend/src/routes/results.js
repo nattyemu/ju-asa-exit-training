@@ -5,10 +5,16 @@ import {
   getExamRankings,
   getStudentResultHistory,
   getSubjectPerformance,
+  getDetailedResult,
 } from "../controllers/resultController.js";
 
 const router = express.Router();
-
+router.get(
+  "/:examId/detailed",
+  authenticate,
+  authorize("STUDENT"),
+  getDetailedResult
+);
 router.get(
   "/exam/:examId",
   authenticate,

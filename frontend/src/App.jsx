@@ -26,6 +26,7 @@ import { UsersPage } from "./pages/admin/UsersPage";
 import { NotificationsPage } from "./pages/admin/NotificationsPage";
 
 import "./App.css";
+import { ExamGuard } from "./components/common/ExamGuard";
 
 function AppContent() {
   return (
@@ -89,16 +90,9 @@ function AppContent() {
           path="/exam/:examId"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
-              <ExamPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/results/:examId"
-          element={
-            <ProtectedRoute allowedRoles={["STUDENT"]}>
-              <ResultsPage />
+              <ExamGuard>
+                <ExamPage />
+              </ExamGuard>
             </ProtectedRoute>
           }
         />

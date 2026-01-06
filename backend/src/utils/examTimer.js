@@ -10,6 +10,9 @@ export const calculateRemainingTime = (
     const now = new Date();
     const started = new Date(startedAt);
 
+    // Convert availableUntil to Date object
+    const availableUntilDate = new Date(availableUntil);
+
     // Calculate end time based on duration
     const endTimeByDuration = new Date(
       started.getTime() + durationMinutes * 60000
@@ -17,7 +20,9 @@ export const calculateRemainingTime = (
 
     // Use whichever comes first: duration end or availability deadline
     const endTime =
-      endTimeByDuration < availableUntil ? endTimeByDuration : availableUntil;
+      endTimeByDuration < availableUntilDate
+        ? endTimeByDuration
+        : availableUntilDate;
 
     const totalRemainingMs = endTime - now;
 
@@ -38,7 +43,6 @@ export const calculateRemainingTime = (
       (totalRemainingMs % (1000 * 60 * 60)) / (1000 * 60)
     );
     const seconds = Math.floor((totalRemainingMs % (1000 * 60)) / 1000);
-
     return {
       total: totalRemainingMs,
       hours,
@@ -66,29 +70,49 @@ export const calculateRemainingTime = (
 export const shouldAutoSubmit = (studentExam, exam) => {
   try {
     const now = new Date();
+    console.log("Current time (now):", now.toISOString());
 
     // If already submitted, no auto-submit needed
-    if (studentExam.submittedAt) return false;
+    if (studentExam.submittedAt) {
+      console.log("Already submitted, returning false");
+      return false;
+    }
 
     const startedAt = new Date(studentExam.startedAt);
-    const availableUntil = new Date(exam.availableUntil);
+    const availableUntilDate = new Date(exam.availableUntil);
 
-    // Check if duration has expired (using exam.duration from database)
+    console.log("Parsed dates:", {
+      startedAt: startedAt.toISOString(),
+      availableUntilDate: availableUntilDate.toISOString(),
+    });
+
+    // Check if duration has expired
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
-    if (now >= durationEnd) return true;
+    console.log("Duration end:", durationEnd.toISOString());
+
+    if (now >= durationEnd) {
+      console.log("Duration expired, returning true");
+      return true;
+    }
 
     // Check if availability deadline has passed
-    if (now >= availableUntil) return true;
+    if (now >= availableUntilDate) {
+      console.log("Availability deadline passed, returning true");
+      return true;
+    }
 
-    // Check if abandoned (no activity for 24 hours)
+    // Check if abandoned
     if (studentExam.updatedAt) {
       const updatedAt = new Date(studentExam.updatedAt);
       const hoursSinceUpdate = (now - updatedAt) / (1000 * 60 * 60);
+      console.log("Hours since update:", hoursSinceUpdate);
       if (hoursSinceUpdate >= 24) {
+        console.log("Abandoned (24h), returning true");
         return true;
       }
     }
 
+    console.log("No auto-submit conditions met, returning false");
     return false;
   } catch (error) {
     console.error("Error checking auto-submit:", error);

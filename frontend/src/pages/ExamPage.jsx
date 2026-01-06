@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useExam } from "../contexts/ExamContext";
@@ -29,139 +29,200 @@ export const ExamPage = () => {
     answers = {},
     timeLeft,
     isLoading: examContextLoading,
-    startExam,
+    needsAutoSubmit,
     saveAnswer,
+    saveAllAnswers,
     submitExam,
     cancelExam,
     updateTime,
+    handleAutoSubmit,
     hasActiveSession,
+    loadActiveSession,
   } = useExam();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [markedQuestions, setMarkedQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isSavingAnswer, setIsSavingAnswer] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [examExpired, setExamExpired] = useState(false);
+  const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
+  const timeExpiredToastShown = useRef(false);
+
+  // Track if we've already loaded to prevent infinite loops
+  const hasLoadedRef = useRef(false);
+
+  // Get current question safely
+  const currentQuestion = questions?.[currentQuestionIndex];
 
   // Convert timeLeft object to seconds for Timer component
-  const remainingTimeInSeconds = timeLeft?.seconds || 0;
+  const remainingTimeInSeconds =
+    timeLeft.hours * 3600 + timeLeft.minutes * 60 + timeLeft.seconds;
 
-  // Check for existing exam session or start new one
-  const initializeExamSession = useCallback(async () => {
+  // Reset states when exam changes
+  useEffect(() => {
+    timeExpiredToastShown.current = false;
+    setShowFiveMinWarning(false);
+    hasLoadedRef.current = false; // Reset when examId changes
+  }, [examId]);
+
+  // Handle exam time up
+  const handleExamTimeUp = useCallback(async () => {
+    if (
+      !currentSession?.id ||
+      examContextLoading ||
+      timeExpiredToastShown.current
+    )
+      return;
+
     try {
-      setIsLoading(true);
+      timeExpiredToastShown.current = true;
+      toast.error("Exam time has expired. Submitting automatically...");
 
-      // If we already have an active session in context, use it
-      if (hasActiveSession && currentSession) {
-        console.log("Using existing session from context");
-        setIsLoading(false);
+      const result = await handleAutoSubmit();
+      if (result.success) {
+        // Redirect happens in handleAutoSubmit
+      }
+    } catch (error) {
+      console.error("Time up handler error:", error);
+    }
+  }, [currentSession, examContextLoading, handleAutoSubmit]);
+
+  // Main exam loading logic - FIXED DEPENDENCIES
+  useEffect(() => {
+    // Skip if already loading or already loaded this session
+    if (hasLoadedRef.current && currentSession?.examId === parseInt(examId)) {
+      console.log("🔄 ExamPage: Already loaded, skipping");
+      return;
+    }
+
+    const loadExam = async () => {
+      if (!examId || user?.role !== "STUDENT") {
+        navigate("/dashboard");
         return;
       }
 
-      // Check if there's an active session on the server
       try {
-        const activeSessionResponse = await examService.getActiveSession();
+        setIsLoading(true);
+        console.log("📱 ExamPage: Loading exam", examId);
 
-        if (
-          activeSessionResponse.data?.success &&
-          activeSessionResponse.data.data?.session
-        ) {
-          // We have an active session
-          const sessionData = activeSessionResponse.data.data;
+        // If we already have the session in context, use it
+        if (currentSession && currentSession.examId === parseInt(examId)) {
+          console.log("✅ ExamPage: Using existing session from context");
+          setSessionChecked(true);
+          hasLoadedRef.current = true;
+          return;
+        }
 
-          // Check if this active session is for the current exam
-          if (sessionData.session.examId === parseInt(examId)) {
-            // The context should already have this from loadActiveSession
-            console.log("Active session found for current exam");
-            setIsLoading(false);
+        // No session in context, try to load it
+        console.log("⚠️ ExamPage: Loading session...");
+
+        // First try to get from API
+        try {
+          const activeResponse = await examService.getActiveSession();
+
+          if (activeResponse.data.success) {
+            const sessionData = activeResponse.data.data;
+
+            // Verify it's the correct exam
+            if (sessionData.session.examId !== parseInt(examId)) {
+              console.log("❌ ExamPage: Wrong exam, redirecting...");
+              toast.error("You have an active session for a different exam");
+              navigate(`/exam/${sessionData.session.examId}`);
+              return;
+            }
+
+            console.log("✅ ExamPage: Found session, loading into context");
+            // Load into context (but only if not already loading)
+            if (!examContextLoading) {
+              await loadActiveSession();
+            }
+
+            setSessionChecked(true);
+            hasLoadedRef.current = true;
             return;
-          } else {
-            // Active session is for a different exam
+          }
+        } catch (sessionError) {
+          console.log("📭 ExamPage: No active session via API");
+
+          if (sessionError.response?.status === 404) {
+            // Check if exam is completed
+            try {
+              const examResponse = await examService.getExamDetails(examId);
+              if (
+                examResponse.data.success &&
+                examResponse.data.data?.status === "COMPLETED"
+              ) {
+                toast.info(
+                  "This exam is already completed. Showing results..."
+                );
+                navigate(`/results/${examId}`);
+                return;
+              }
+            } catch (examError) {
+              console.log("Could not check exam status:", examError);
+            }
+
             toast.error(
-              "You have an active session for another exam. Please complete or cancel it first."
+              "No active exam session found. Please start from dashboard."
             );
             navigate("/dashboard");
             return;
           }
         }
+
+        // Generic error
+        toast.error("Failed to load exam session. Please try again.");
+        navigate("/dashboard");
       } catch (error) {
-        // If "No active exam session found", that's fine - we'll start a new one
-        if (
-          error.response?.status === 404 &&
-          error.response?.data?.message?.includes(
-            "No active exam session found"
-          )
-        ) {
-          console.log("No active session - starting new one");
+        console.error("❌ ExamPage: Failed to load exam:", error);
+
+        if (error.response?.status === 404) {
+          toast.error("Exam session not found. Please start from dashboard.");
+          navigate("/dashboard");
         } else {
-          // Some other error
-          console.error("Error checking active session:", error);
-          toast.error("Failed to check exam status");
+          toast.error("Failed to load exam. Please try again.");
           navigate("/dashboard");
-          return;
         }
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      // No active session, start a new one using the context's startExam function
-      console.log("Starting new exam session for examId:", examId);
-      const result = await startExam(parseInt(examId));
+    loadExam();
 
-      if (result.success) {
-        toast.success("Exam started successfully!");
-      } else {
-        toast.error(result.message || "Failed to start exam");
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      console.error("Exam initialization error:", error);
+    // Cleanup function
+    return () => {
+      // Don't reset hasLoadedRef here - we want to remember we loaded this session
+    };
+  }, [
+    examId,
+    user,
+    currentSession,
+    examContextLoading,
+    navigate,
+    loadActiveSession,
+  ]);
 
-      // Check specific error types
-      if (error.response?.status === 400) {
-        if (error.response.data.message.includes("already completed")) {
-          toast.error("You have already completed this exam");
-          navigate(`/results/${examId}`);
-          return;
-        }
-        if (error.response.data.message.includes("not available")) {
-          toast.error("This exam is not available at this time");
-          navigate("/dashboard");
-          return;
-        }
-      }
-
-      if (error.response?.status === 404) {
-        toast.error("Exam not found");
-        navigate("/dashboard");
-        return;
-      }
-
-      toast.error("Failed to start exam. Please try again.");
-      navigate("/dashboard");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [examId, hasActiveSession, currentSession, startExam, navigate]);
-
-  // Initialize exam on component mount
+  // Timer effect - FIXED: Remove sessionChecked dependency to prevent loops
   useEffect(() => {
-    if (examId && user?.role === "STUDENT") {
-      initializeExamSession();
-    }
-  }, [examId, user, initializeExamSession]);
-
-  // Timer effect
-  useEffect(() => {
-    if (
-      !remainingTimeInSeconds ||
-      remainingTimeInSeconds <= 0 ||
-      !hasActiveSession
-    )
-      return;
+    if (remainingTimeInSeconds <= 0 || !currentSession || examExpired) return;
 
     const timerInterval = setInterval(() => {
       const newSeconds = remainingTimeInSeconds - 1;
+
+      // Show 5-minute warning
+      if (newSeconds === 300 && !showFiveMinWarning) {
+        setShowFiveMinWarning(true);
+        toast.warning("Only 5 minutes left! Submit your answers soon.", {
+          duration: 5000,
+        });
+      }
+
       if (newSeconds <= 0) {
         clearInterval(timerInterval);
-        handleAutoSubmit();
+        handleExamTimeUp();
         updateTime({ hours: 0, minutes: 0, seconds: 0 });
       } else {
         const hours = Math.floor(newSeconds / 3600);
@@ -172,49 +233,104 @@ export const ExamPage = () => {
     }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, [remainingTimeInSeconds, hasActiveSession, updateTime]);
+  }, [
+    remainingTimeInSeconds,
+    currentSession,
+    updateTime,
+    examExpired,
+    handleExamTimeUp,
+    showFiveMinWarning,
+  ]);
 
-  const handleAnswerSelect = async (questionId, chosenAnswer) => {
-    if (!currentSession?.id) return;
+  // Save answers on page unload
+  useEffect(() => {
+    const handleBeforeUnload = async (e) => {
+      if (currentSession?.id) {
+        // Try to save all answers before page closes
+        await saveAllAnswers();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [currentSession, saveAllAnswers]);
+
+  const handleAnswerSelect = async (chosenAnswer) => {
+    if (!currentSession?.id || !currentQuestion || examExpired) {
+      toast.error("Cannot save answer - exam session not active");
+      return;
+    }
 
     try {
-      // Save to server (background)
-      const result = await saveAnswer(questionId, chosenAnswer, true);
+      setIsSavingAnswer(true);
+
+      const normalizedAnswer = chosenAnswer.toUpperCase();
+      const result = await saveAnswer(
+        currentQuestion.id,
+        normalizedAnswer,
+        true
+      );
+
       if (!result.success) {
-        toast.error(result.message || "Failed to save answer");
+        if (result.timeExpired) {
+          if (!timeExpiredToastShown.current) {
+            timeExpiredToastShown.current = true;
+            toast.error(result.message);
+            handleExamTimeUp();
+          }
+        } else if (!result.message.includes("auto-save")) {
+          toast.error(result.message || "Failed to save answer");
+        }
       }
     } catch (error) {
       console.error("Failed to save answer:", error);
-      if (
-        !error.response?.status === 404 ||
-        !error.response?.data?.message?.includes("exam session")
-      ) {
-        toast.error("Failed to save answer. Please check your connection.");
+
+      if (error.response?.status === 400 && error.response.data.timeExpired) {
+        if (!timeExpiredToastShown.current) {
+          timeExpiredToastShown.current = true;
+          toast.error("Exam time has expired. Auto-submitting...");
+          handleExamTimeUp();
+        }
+        return;
       }
+
+      if (error.response?.status === 404) {
+        if (error.response.data.message?.includes("exam session")) {
+          toast.error("Exam session expired. Please start again.");
+          navigate("/dashboard");
+          return;
+        }
+      }
+
+      toast.error("Failed to save answer. Please check your connection.");
+    } finally {
+      setIsSavingAnswer(false);
     }
   };
 
-  const handleNavigate = (index) => {
+  const handleNavigate = async (index) => {
     if (index >= 0 && index < questions.length) {
+      // Save current answer before navigating
+      if (currentQuestion && answers[currentQuestion.id]) {
+        await saveAnswer(currentQuestion.id, answers[currentQuestion.id], true);
+      }
+
       setCurrentQuestionIndex(index);
     }
   };
 
-  const handleAutoSubmit = async () => {
-    if (!currentSession?.id || examContextLoading) return;
-
+  const handleManualSave = async () => {
     try {
-      const result = await submitExam();
+      const result = await saveAllAnswers();
       if (result.success) {
-        toast.success("Exam auto-submitted due to time expiration");
-        navigate(`/results/${examId}`);
+        toast.success(`Saved ${result.count || 0} answers successfully`);
       } else {
-        console.log("Auto-submit failed:", result.message);
-        // Don't show toast for auto-submit failures
+        toast.error(result.message || "Failed to save answers");
       }
     } catch (error) {
-      console.error("Auto-submit failed:", error);
-      // Don't show toast for auto-submit failures
+      toast.error("Failed to save answers");
     }
   };
 
@@ -223,8 +339,11 @@ export const ExamPage = () => {
 
     try {
       const result = await submitExam();
+
       if (result.success) {
         toast.success("Exam submitted successfully!");
+        navigate(`/results/${examId}`);
+      } else if (result.redirect) {
         navigate(`/results/${examId}`);
       } else {
         toast.error(result.message || "Failed to submit exam");
@@ -232,16 +351,35 @@ export const ExamPage = () => {
     } catch (error) {
       console.error("Submit exam error:", error);
 
+      if (error.response?.status === 404) {
+        toast.error("Exam session not found. Checking if already submitted...");
+
+        try {
+          const resultResponse = await examService.getExamResult(examId);
+          if (resultResponse.data.success) {
+            toast.success("Exam already submitted. Showing results...");
+            navigate(`/results/${examId}`);
+            return;
+          }
+        } catch (resultError) {
+          console.error("Check result error:", resultError);
+        }
+
+        toast.error("Please contact support if this issue persists.");
+        navigate("/dashboard");
+        return;
+      }
+
       if (error.response?.status === 400) {
         if (error.response.data.message.includes("already submitted")) {
-          toast.error("This exam has already been submitted");
+          toast.error("Exam already submitted. Redirecting...");
           navigate(`/results/${examId}`);
           return;
         }
-        if (error.response.data.message.includes("Please check inputs")) {
-          toast.error(
-            "Invalid submission. Please try again or contact support."
-          );
+
+        if (error.response.data.message.includes("time has expired")) {
+          toast.error("Exam time has expired. Auto-submitting...");
+          handleExamTimeUp();
           return;
         }
       }
@@ -281,21 +419,53 @@ export const ExamPage = () => {
   const progressPercentage =
     totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
 
-  // Get current question safely
-  const currentQuestion = questions?.[currentQuestionIndex];
+  // Determine if time has expired
+  const isTimeExpired =
+    remainingTimeInSeconds <= 0 || needsAutoSubmit || examExpired;
 
-  if (isLoading || examContextLoading) {
+  // Loading state - check if we have session and questions
+  if (isLoading || examContextLoading || (!currentSession && !examExpired)) {
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-text-secondary">Loading exam...</p>
+          <p className="mt-4 text-text-secondary">
+            {examContextLoading ? "Loading exam session..." : "Loading exam..."}
+          </p>
+          {currentSession && (
+            <p className="text-xs text-gray-500 mt-2">
+              Session: {currentSession.id}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  if (!hasActiveSession) {
+  if (examExpired) {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">
+            Exam Submission Deadline Passed
+          </h2>
+          <p className="text-text-secondary mb-6">
+            The submission deadline for this exam has passed. Please check your
+            results or contact your instructor.
+          </p>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentSession) {
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
         <div className="text-center">
@@ -305,6 +475,29 @@ export const ExamPage = () => {
           </h2>
           <p className="text-text-secondary mb-6">
             Unable to start or resume exam session.
+          </p>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if we have questions
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">
+            No Questions Available
+          </h2>
+          <p className="text-text-secondary mb-6">
+            This exam doesn't have any questions yet.
           </p>
           <button
             onClick={() => navigate("/dashboard")}
@@ -344,15 +537,17 @@ export const ExamPage = () => {
             </div>
 
             <div className="flex items-center gap-6">
-              {/* Timer */}
-              <div className="hidden md:flex items-center gap-2">
-                <Clock className="w-5 h-5 text-text-secondary" />
-                <Timer
-                  initialTime={remainingTimeInSeconds}
-                  onTimeUp={handleAutoSubmit}
-                  isSubmitting={examContextLoading}
-                />
-              </div>
+              {/* Timer - hide if time expired */}
+              {!isTimeExpired && (
+                <div className="hidden md:flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-text-secondary" />
+                  <Timer
+                    initialTime={remainingTimeInSeconds}
+                    onTimeUp={handleExamTimeUp}
+                    isSubmitting={examContextLoading}
+                  />
+                </div>
+              )}
 
               {/* Progress */}
               <div className="hidden md:block">
@@ -370,16 +565,21 @@ export const ExamPage = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button - disable if time expired */}
               <button
                 onClick={() => setShowConfirmSubmit(true)}
-                disabled={examContextLoading}
+                disabled={examContextLoading || isTimeExpired}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {examContextLoading ? (
                   <>
                     <LoadingSpinner size="sm" color="white" />
                     Submitting...
+                  </>
+                ) : isTimeExpired ? (
+                  <>
+                    <Clock className="w-5 h-5" />
+                    Time Expired
                   </>
                 ) : (
                   <>
@@ -403,21 +603,23 @@ export const ExamPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-text-secondary" />
-                  <Timer
-                    initialTime={remainingTimeInSeconds}
-                    onTimeUp={handleAutoSubmit}
-                    isSubmitting={examContextLoading}
-                    compact
-                  />
-                </div>
+              {!isTimeExpired && (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-text-secondary" />
+                    <Timer
+                      initialTime={remainingTimeInSeconds}
+                      onTimeUp={handleExamTimeUp}
+                      isSubmitting={examContextLoading}
+                      compact
+                    />
+                  </div>
 
-                <div className="text-sm">
-                  {answeredCount}/{totalQuestions}
+                  <div className="text-sm">
+                    {answeredCount}/{totalQuestions}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -469,11 +671,9 @@ export const ExamPage = () => {
               {/* Action Buttons */}
               <div className="mt-6 space-y-3">
                 <button
-                  onClick={() => {
-                    toast.success("Answers saved");
-                  }}
+                  onClick={handleManualSave}
                   className="w-full py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
-                  disabled={examContextLoading}
+                  disabled={examContextLoading || isTimeExpired}
                 >
                   <Save className="w-4 h-4" />
                   Save Progress
@@ -482,7 +682,7 @@ export const ExamPage = () => {
                 <button
                   onClick={handleCancelExam}
                   className="w-full py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
-                  disabled={examContextLoading}
+                  disabled={examContextLoading || isTimeExpired}
                 >
                   <LogOut className="w-4 h-4" />
                   Cancel Exam
@@ -512,16 +712,27 @@ export const ExamPage = () => {
 
           {/* Main content - Question */}
           <div className="lg:col-span-3">
+            {showFiveMinWarning && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <p className="text-sm font-medium text-red-800">
+                    ⚠️ Only 5 minutes left! Submit your exam soon.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-xl border border-border shadow-sm">
               {currentQuestion ? (
                 <QuestionCard
                   question={currentQuestion}
                   questionNumber={currentQuestionIndex + 1}
+                  totalQuestions={totalQuestions}
                   selectedAnswer={answers[currentQuestion.id]}
-                  onAnswerSelect={(answer) =>
-                    handleAnswerSelect(currentQuestion.id, answer)
-                  }
-                  isSubmitting={examContextLoading}
+                  onAnswerSelect={handleAnswerSelect}
+                  isSubmitting={isSavingAnswer}
+                  timeExpired={isTimeExpired}
                 />
               ) : (
                 <div className="p-8 text-center">
@@ -555,7 +766,7 @@ export const ExamPage = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      if (!currentQuestion) return;
+                      if (!currentQuestion || isTimeExpired) return;
                       if (markedQuestions.includes(currentQuestion.id)) {
                         setMarkedQuestions((prev) =>
                           prev.filter((id) => id !== currentQuestion.id)
@@ -570,7 +781,9 @@ export const ExamPage = () => {
                       }
                     }}
                     className="px-4 py-2 border border-yellow-500 text-yellow-600 rounded-lg hover:bg-yellow-50 transition-colors"
-                    disabled={examContextLoading || !currentQuestion}
+                    disabled={
+                      examContextLoading || !currentQuestion || isTimeExpired
+                    }
                   >
                     {currentQuestion &&
                     markedQuestions.includes(currentQuestion.id)
@@ -603,8 +816,19 @@ export const ExamPage = () => {
                 <li>• Select only one answer per question</li>
                 <li>• Answers are auto-saved as you select them</li>
                 <li>• You can navigate between questions freely</li>
-                <li>• The exam will auto-submit when time expires</li>
-                <li>• Once submitted, you cannot change answers</li>
+                <li>
+                  • Use "Save Progress" button to manually save all answers
+                </li>
+                {isTimeExpired ? (
+                  <li className="text-red-600 font-medium">
+                    • Exam time has expired. Answers cannot be changed.
+                  </li>
+                ) : (
+                  <>
+                    <li>• The exam will auto-submit when time expires</li>
+                    <li>• Once submitted, you cannot change answers</li>
+                  </>
+                )}
                 <li>
                   • Use "Mark for Review" to flag questions you want to revisit
                 </li>
@@ -655,7 +879,7 @@ export const ExamPage = () => {
               </button>
               <button
                 onClick={handleSubmitExam}
-                disabled={examContextLoading}
+                disabled={examContextLoading || isTimeExpired}
                 className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {examContextLoading ? (
@@ -663,6 +887,8 @@ export const ExamPage = () => {
                     <LoadingSpinner size="sm" color="white" />
                     Submitting...
                   </>
+                ) : isTimeExpired ? (
+                  "Time Expired"
                 ) : (
                   "Submit Exam"
                 )}

@@ -63,28 +63,28 @@ export const adminService = {
     api.get(`/analytics/exam/${examId}/difficulty-analysis`),
 
   // Export - UPDATED
-  exportExamResults: (examId) =>
-    api.get(`/analytics/export/exam/${examId}/results`, {
-      responseType: "blob",
-    }),
+  // exportExamResults: (examId) =>
+  //   api.get(`/analytics/export/exam/${examId}/results`, {
+  //     responseType: "blob",
+  //   }),
 
-  exportQuestionAnalytics: (examId) =>
-    api.get(`/analytics/export/exam/${examId}/questions`, {
-      responseType: "blob",
-    }),
+  // exportQuestionAnalytics: (examId) =>
+  //   api.get(`/analytics/export/exam/${examId}/questions`, {
+  //     responseType: "blob",
+  //   }),
 
   // REMOVED: exportDepartmentPerformance
 
-  exportCompleteReport: (examId, startDate, endDate) => {
-    const params = new URLSearchParams();
-    params.append("examId", examId);
-    params.append("startDate", startDate);
-    params.append("endDate", endDate);
+  // exportCompleteReport: (examId, startDate, endDate) => {
+  //   const params = new URLSearchParams();
+  //   params.append("examId", examId);
+  //   params.append("startDate", startDate);
+  //   params.append("endDate", endDate);
 
-    return api.get(`/analytics/export/complete-report?${params.toString()}`, {
-      responseType: "blob",
-    });
-  },
+  //   return api.get(`/analytics/export/complete-report?${params.toString()}`, {
+  //     responseType: "blob",
+  //   });
+  // },
   // Notifications
   sendExamReminders: (examId) => {
     console.log("📧 AdminService: Sending reminders for examId:", examId);
@@ -103,11 +103,24 @@ export const adminService = {
     return api.post(`/notifications/reminders/exam/${examId}`);
   },
 
-  sendDeadlineWarnings: () => {
-    console.log("⏰ Sending deadline warnings");
-    return api.post("/notifications/reminders/deadline");
-  },
+  // Notifications - Unstarted Exam Reminders
+  sendUnstartedExamReminders: (examId) => {
+    console.log(
+      "📝 AdminService: Sending unstarted exam reminders for examId:",
+      examId
+    );
 
+    if (!examId) {
+      throw new Error("Exam ID is required for unstarted exam reminders");
+    }
+
+    return api.post(`/notifications/reminders/unstarted/${examId}`);
+  },
+  // Get unstarted exam statistics
+  getUnstartedExamStats: () => {
+    console.log("📊 Getting unstarted exam statistics");
+    return api.get("/notifications/unstarted-stats");
+  },
   sendSystemAnnouncement: (announcement) => {
     console.log("📢 Sending system announcement:", announcement.title);
     return api.post("/notifications/announcement", announcement);

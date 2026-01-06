@@ -18,6 +18,7 @@ import { adminService } from "../../services/adminService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { RegisterStudentModal } from "./RegisterStudentModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
+import { ImageModal } from "../common/ImageModal"; // Import the ImageModal
 import toast from "react-hot-toast";
 
 export const UserManager = () => {
@@ -33,6 +34,13 @@ export const UserManager = () => {
     limit: 10,
     total: 0,
     pages: 0,
+  });
+
+  // NEW: State for image modal
+  const [imageModal, setImageModal] = useState({
+    isOpen: false,
+    imageUrl: null,
+    alt: "",
   });
 
   useEffect(() => {
@@ -158,6 +166,24 @@ export const UserManager = () => {
     }
   };
 
+  // NEW: Function to open image modal
+  const openImageModal = (imageUrl, altText) => {
+    setImageModal({
+      isOpen: true,
+      imageUrl: getProfileImageUrl(imageUrl),
+      alt: altText,
+    });
+  };
+
+  // NEW: Function to close image modal
+  const closeImageModal = () => {
+    setImageModal({
+      isOpen: false,
+      imageUrl: null,
+      alt: "",
+    });
+  };
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -203,6 +229,14 @@ export const UserManager = () => {
 
   return (
     <div>
+      {/* Image Modal Component */}
+      <ImageModal
+        isOpen={imageModal.isOpen}
+        imageUrl={imageModal.imageUrl}
+        alt={imageModal.alt}
+        onClose={closeImageModal}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -351,7 +385,18 @@ export const UserManager = () => {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20">
+                        {/* Profile Image Container - Clickable */}
+                        <div
+                          className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer hover:scale-105 transition-transform duration-200"
+                          onClick={() => {
+                            if (user.profile?.profileImageUrl) {
+                              openImageModal(
+                                user.profile.profileImageUrl,
+                                user.profile?.fullName || user.email
+                              );
+                            }
+                          }}
+                        >
                           {user.profile?.profileImageUrl ? (
                             <>
                               <img
@@ -367,7 +412,15 @@ export const UserManager = () => {
                               </div>
                             </>
                           ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold">
+                            <div
+                              className="w-full h-full bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
+                              onClick={() =>
+                                openImageModal(
+                                  null,
+                                  user.profile?.fullName || user.email
+                                )
+                              }
+                            >
                               {user.profile?.fullName?.charAt(0) ||
                                 user.email.charAt(0).toUpperCase()}
                             </div>

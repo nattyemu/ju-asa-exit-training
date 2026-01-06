@@ -1,28 +1,96 @@
-import { Clock, Award, Calendar, ArrowRight, CheckCircle } from "lucide-react";
+import { Clock, Award, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 
-export const ExamCard = ({ exam, onStart }) => {
-  const getStatusColor = (status) => {
+export const ExamCard = ({ exam, onStart, isStarting = false }) => {
+  const getStatusColor = (status, exam) => {
+    if (status === "COMPLETED") {
+      // For completed exams, show PASS/FAIL based on score
+      if (exam.result?.score >= exam.passingScore) {
+        return "bg-green-100 text-green-800";
+      } else {
+        return "bg-red-100 text-red-800";
+      }
+    }
+
     switch (status) {
       case "NOT_STARTED":
         return "bg-blue-100 text-blue-800";
       case "IN_PROGRESS":
         return "bg-yellow-100 text-yellow-800";
-      case "COMPLETED":
-        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status, exam) => {
+    if (status === "COMPLETED") {
+      if (exam.result?.score >= exam.passingScore) {
+        return <CheckCircle className="w-4 h-4" />;
+      } else {
+        return <XCircle className="w-4 h-4" />;
+      }
+    }
+
     switch (status) {
       case "IN_PROGRESS":
         return <Clock className="w-4 h-4" />;
-      case "COMPLETED":
-        return <CheckCircle className="w-4 h-4" />;
+      case "NOT_STARTED":
+        return <Calendar className="w-4 h-4" />;
       default:
         return <Calendar className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusText = (status, exam) => {
+    if (status === "COMPLETED") {
+      if (exam.result?.score >= exam.passingScore) {
+        return "PASSED";
+      } else {
+        return "FAILED";
+      }
+    }
+
+    switch (status) {
+      case "NOT_STARTED":
+        return "AVAILABLE";
+      case "IN_PROGRESS":
+        return "IN PROGRESS";
+      default:
+        return "AVAILABLE";
+    }
+  };
+
+  const getButtonText = (status, exam, isStarting) => {
+    if (isStarting) return "Starting...";
+
+    switch (status) {
+      case "IN_PROGRESS":
+        // Check if exam is expired
+        const now = new Date();
+        const availableUntil = new Date(exam.availableUntil);
+        return now > availableUntil ? "View Results" : "Continue Exam";
+      case "COMPLETED":
+        return "View Results";
+      default:
+        return "Start Exam";
+    }
+  };
+
+  const getButtonColor = (status, exam) => {
+    if (status === "COMPLETED") {
+      return exam.result?.score >= exam.passingScore
+        ? "bg-green-600 hover:bg-green-700 text-white"
+        : "bg-red-600 hover:bg-red-700 text-white";
+    }
+
+    switch (status) {
+      case "IN_PROGRESS":
+        return "bg-yellow-600 hover:bg-yellow-700 text-white";
+      case "NOT_STARTED":
+        return "bg-primary hover:bg-primary-dark text-white";
+      default:
+        return "bg-primary hover:bg-primary-dark text-white";
     }
   };
 
@@ -40,11 +108,12 @@ export const ExamCard = ({ exam, onStart }) => {
           </div>
           <span
             className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-              exam.status
+              exam.status,
+              exam
             )}`}
           >
-            {getStatusIcon(exam.status)}
-            {exam.statusText}
+            {getStatusIcon(exam.status, exam)}
+            {getStatusText(exam.status, exam)}
           </span>
         </div>
 
@@ -78,22 +147,32 @@ export const ExamCard = ({ exam, onStart }) => {
           </div>
         </div>
 
-        {exam.result && (
-          <div className="mb-6 p-3 bg-primary/5 rounded-lg border border-primary/20">
+        {exam.result && exam.status === "COMPLETED" && (
+          <div
+            className={`mb-6 p-3 rounded-lg border ${
+              exam.result.score >= exam.passingScore
+                ? "bg-green-50 border-green-200"
+                : "bg-red-50 border-red-200"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-text-primary">
-                  Previous Attempt
+                  Score: {exam.result.score}%
                 </p>
                 <p className="text-xs text-text-secondary">
-                  Score:{" "}
-                  <span className="font-bold text-primary">
-                    {exam.result.score}%
-                  </span>
-                  {exam.result.rank && ` • Rank: #${exam.result.rank}`}
+                  {exam.result.rank && `Rank: #${exam.result.rank}`}
+                  {exam.result.rank && ` • `}
+                  {exam.result.score >= exam.passingScore ? "PASS" : "FAIL"}
                 </p>
               </div>
-              <Award className="w-5 h-5 text-primary" />
+              <Award
+                className={`w-5 h-5 ${
+                  exam.result.score >= exam.passingScore
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              />
             </div>
           </div>
         )}
@@ -101,25 +180,19 @@ export const ExamCard = ({ exam, onStart }) => {
         <div className="flex gap-3">
           <button
             onClick={() => onStart(exam)}
-            disabled={!exam.canStart}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-              exam.canStart
-                ? "bg-primary hover:bg-primary-dark text-white hover:scale-[1.02] active:scale-[0.98]"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
+            disabled={isStarting}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${getButtonColor(
+              exam.status,
+              exam
+            )} hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {exam.status === "IN_PROGRESS" ? (
+            {isStarting ? (
               <>
-                <ArrowRight className="w-4 h-4" />
-                Continue Exam
+                <LoadingSpinner size="sm" />
+                <span>Starting...</span>
               </>
-            ) : exam.status === "COMPLETED" ? (
-              "View Results"
             ) : (
-              <>
-                <ArrowRight className="w-4 h-4" />
-                Start Exam
-              </>
+              getButtonText(exam.status, exam, isStarting)
             )}
           </button>
         </div>
