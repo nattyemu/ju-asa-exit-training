@@ -124,8 +124,8 @@ export const getAvailableExams = async (req, res) => {
     const studentId = req.user.userId;
     const now = new Date();
 
-    // Get only exams that are currently available (within the time window)
-    const availableExams = await db
+    // Get all active exams (regardless of time window)
+    const allActiveExams = await db
       .select({
         id: exams.id,
         title: exams.title,
@@ -139,17 +139,11 @@ export const getAvailableExams = async (req, res) => {
         isActive: exams.isActive,
       })
       .from(exams)
-      .where(
-        and(
-          eq(exams.isActive, true),
-          lte(exams.availableFrom, now), // Exam has started (availableFrom <= now)
-          gte(exams.availableUntil, now) // Exam hasn't expired yet (availableUntil >= now)
-        )
-      )
+      .where(eq(exams.isActive, true))
       .orderBy(asc(exams.availableFrom));
 
     // Get student's exam attempts for these exams
-    const examIds = availableExams.map((exam) => exam.id);
+    const examIds = allActiveExams.map((exam) => exam.id);
 
     let studentExamsList = [];
     if (examIds.length > 0) {
@@ -178,12 +172,15 @@ export const getAvailableExams = async (req, res) => {
     });
 
     // Format exams with status
-    const formattedExams = availableExams.map((exam) => {
+    const formattedExams = allActiveExams.map((exam) => {
       const studentExam = studentExamMap.get(exam.id);
+      const isCurrentlyAvailable =
+        now >= new Date(exam.availableFrom) &&
+        now <= new Date(exam.availableUntil);
 
       let status = "NOT_STARTED";
-      let statusText = "Available";
-      let canStart = true;
+      let statusText = isCurrentlyAvailable ? "Available" : "Not Available";
+      let canStart = isCurrentlyAvailable;
 
       if (studentExam) {
         if (studentExam.submittedAt) {
@@ -193,7 +190,7 @@ export const getAvailableExams = async (req, res) => {
         } else if (studentExam.startedAt) {
           status = "IN_PROGRESS";
           statusText = "In Progress";
-          canStart = false;
+          canStart = true; // Can continue
         }
       }
 
@@ -209,11 +206,14 @@ export const getAvailableExams = async (req, res) => {
         status,
         statusText,
         canStart,
+        isCurrentlyAvailable,
         // Calculate remaining time in minutes
-        timeRemaining: Math.max(
-          0,
-          Math.floor((new Date(exam.availableUntil) - now) / (1000 * 60))
-        ),
+        timeRemaining: isCurrentlyAvailable
+          ? Math.max(
+              0,
+              Math.floor((new Date(exam.availableUntil) - now) / (1000 * 60))
+            )
+          : 0,
         // Include result if completed
         ...(studentExam?.submittedAt && {
           result: {

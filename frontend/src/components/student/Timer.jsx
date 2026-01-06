@@ -9,31 +9,52 @@ export const Timer = ({
 }) => {
   const [time, setTime] = useState(initialTime);
   const hasCalledTimeUp = useRef(false);
+  const timerRef = useRef(null);
+  const lastCheckRef = useRef(Date.now());
 
   useEffect(() => {
     setTime(initialTime);
+    hasCalledTimeUp.current = false;
+
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
   }, [initialTime]);
 
   useEffect(() => {
     if (time <= 0 || isSubmitting || hasCalledTimeUp.current) return;
 
-    const timer = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setTime((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(timerRef.current);
           if (onTimeUp && !hasCalledTimeUp.current) {
             hasCalledTimeUp.current = true;
+            console.log("Timer: Time is up, calling onTimeUp");
             onTimeUp();
           }
           return 0;
         }
         return prev - 1;
       });
+
+      // Force auto-submit when time is very low (10 seconds)
+      const now = Date.now();
+      if (time <= 10 && now - lastCheckRef.current > 1000) {
+        lastCheckRef.current = now;
+        if (onTimeUp && !hasCalledTimeUp.current) {
+          console.log(`Timer: Only ${time} seconds left, forcing onTimeUp`);
+          hasCalledTimeUp.current = true;
+          onTimeUp();
+        }
+      }
     }, 1000);
 
     return () => {
-      clearInterval(timer);
-      hasCalledTimeUp.current = false;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [time, isSubmitting, onTimeUp]);
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Calendar, Clock, Award, Percent } from "lucide-react";
+import { X, Calendar, Clock, Award } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toast from "react-hot-toast";
@@ -273,7 +273,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   max="500"
                 />
                 <p className="mt-1 text-xs text-text-secondary">
-                  1-500 questions
+                  1-100 questions
                 </p>
                 {errors.totalQuestions && (
                   <p className="mt-1 text-sm text-red-600">
@@ -284,10 +284,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
 
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  <div className="flex items-center gap-2">
-                    <Percent className="w-4 h-4" />
-                    Passing Score (%) *
-                  </div>
+                  <div className="flex items-center gap-2">Passing Score *</div>
                 </label>
                 <input
                   type="number"
@@ -303,9 +300,11 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   }`}
                   min="0"
                   max="100"
-                  step="0.1"
+                  step="1"
                 />
-                <p className="mt-1 text-xs text-text-secondary">0-100%</p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  passing score
+                </p>
                 {errors.passingScore && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.passingScore}

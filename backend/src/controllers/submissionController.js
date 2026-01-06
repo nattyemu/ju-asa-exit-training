@@ -59,16 +59,16 @@ export const submitExam = async (req, res) => {
       });
     }
 
-    // Check if already submitted - PREVENT ALL ACTIONS
+    // Check if already submitted
     if (existingSession.submittedAt) {
       const [existingResult] = await db
         .select()
         .from(results)
         .where(eq(results.studentExamId, sessionId));
 
-      return res.status(400).json({
-        success: false,
-        message: "Exam already submitted. No further actions allowed.",
+      return res.status(200).json({
+        success: true,
+        message: "Exam already submitted",
         data: {
           result: existingResult,
           session: existingSession,
@@ -93,17 +93,33 @@ export const submitExam = async (req, res) => {
       });
     }
 
-    // Check if exam time has expired - PREVENT ANSWER SUBMISSIONS
+    // For manual submission: Check if exam time has expired
     const now = new Date();
     const startedAt = new Date(existingSession.startedAt);
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
+    const availableUntil = new Date(exam.availableUntil);
 
-    if (now > durationEnd) {
+    // Check if we're in auto-submit mode (called from auto-submit service)
+    const isAutoSubmit = req.body.isAutoSubmit === true;
+
+    if (!isAutoSubmit && now > durationEnd) {
       return res.status(400).json({
         success: false,
-        message:
-          "Exam time has expired. No further answer submissions allowed.",
+        message: "Exam time has expired. Please use auto-submit.",
+        timeExpired: true,
       });
+    }
+
+    // Calculate time spent in minutes
+    const submittedAt = new Date();
+    let timeSpentMinutes;
+
+    if (now > durationEnd) {
+      // For expired exams, use full duration
+      timeSpentMinutes = exam.duration;
+    } else {
+      const timeSpentMs = submittedAt - startedAt;
+      timeSpentMinutes = Math.floor(timeSpentMs / (1000 * 60));
     }
 
     // Optional: Save any last-minute answers from request body
@@ -111,61 +127,57 @@ export const submitExam = async (req, res) => {
     let newAnswersCount = 0;
     let updatedAnswersCount = 0;
 
-    if (lastAnswers && lastAnswers.length > 0) {
-      for (const answerData of lastAnswers) {
-        const { questionId, chosenAnswer } = answerData;
+    if (lastAnswers && lastAnswers.length > 0 && !isAutoSubmit) {
+      // Only accept answers if not auto-submit and time hasn't expired
+      if (now <= durationEnd) {
+        for (const answerData of lastAnswers) {
+          const { questionId, chosenAnswer } = answerData;
 
-        // Check if answer already exists
-        const [existingAnswer] = await db
-          .select()
-          .from(answers)
-          .where(
-            and(
-              eq(answers.studentExamId, sessionId),
-              eq(answers.questionId, questionId)
-            )
-          );
+          // Check if answer already exists
+          const [existingAnswer] = await db
+            .select()
+            .from(answers)
+            .where(
+              and(
+                eq(answers.studentExamId, sessionId),
+                eq(answers.questionId, questionId)
+              )
+            );
 
-        if (existingAnswer) {
-          // Normalize both values for comparison
-          const existing = String(existingAnswer.chosenAnswer || "")
-            .trim()
-            .toUpperCase();
-          const newAnswer = String(chosenAnswer || "")
-            .trim()
-            .toUpperCase();
+          if (existingAnswer) {
+            const existing = String(existingAnswer.chosenAnswer || "")
+              .trim()
+              .toUpperCase();
+            const newAnswer = String(chosenAnswer || "")
+              .trim()
+              .toUpperCase();
 
-          // Only update if answer is different
-          if (existing !== newAnswer) {
-            await db
-              .update(answers)
-              .set({ chosenAnswer })
-              .where(
-                and(
-                  eq(answers.studentExamId, sessionId),
-                  eq(answers.questionId, questionId)
-                )
-              );
-            updatedAnswersCount++;
+            if (existing !== newAnswer) {
+              await db
+                .update(answers)
+                .set({ chosenAnswer })
+                .where(
+                  and(
+                    eq(answers.studentExamId, sessionId),
+                    eq(answers.questionId, questionId)
+                  )
+                );
+              updatedAnswersCount++;
+            }
+          } else {
+            await db.insert(answers).values({
+              studentExamId: sessionId,
+              questionId,
+              chosenAnswer,
+            });
+            newAnswersCount++;
           }
-        } else {
-          await db.insert(answers).values({
-            studentExamId: sessionId,
-            questionId,
-            chosenAnswer,
-          });
-          newAnswersCount++;
         }
       }
     }
 
-    // Calculate time spent in minutes
-    const submittedAt = new Date();
-    const timeSpentMs = submittedAt - startedAt;
-    const timeSpentMinutes = Math.floor(timeSpentMs / (1000 * 60));
-
     let finalResult;
-    let action = "submitted";
+    let action = isAutoSubmit ? "auto_submitted" : "submitted";
 
     // Check if result already exists
     const [existingResult] = await db
@@ -174,24 +186,24 @@ export const submitExam = async (req, res) => {
       .where(eq(results.studentExamId, sessionId));
 
     if (existingResult) {
-      // Result exists - check if we need to recalculate
-      if (newAnswersCount > 0 || updatedAnswersCount > 0) {
-        // Recalculate with new/updated answers
-        await db.transaction(async (tx) => {
-          await tx
-            .update(studentExams)
-            .set({
-              submittedAt: submittedAt,
-              timeSpent: timeSpentMinutes,
-              updatedAt: new Date(),
-            })
-            .where(eq(studentExams.id, sessionId));
+      // Result exists - just update submission time
+      await db.transaction(async (tx) => {
+        await tx
+          .update(studentExams)
+          .set({
+            submittedAt: submittedAt,
+            timeSpent: timeSpentMinutes,
+            updatedAt: new Date(),
+          })
+          .where(eq(studentExams.id, sessionId));
 
+        // Only recalculate if we have new/updated answers
+        if (newAnswersCount > 0 || updatedAnswersCount > 0) {
           const scoreResult = await calculateScore(sessionId);
           await updateAnswerCorrectness(sessionId, scoreResult.answers);
           const rank = await calculateRank(
             exam.id,
-            sessionId, // ADDED: studentExamId parameter
+            sessionId,
             scoreResult.score,
             timeSpentMinutes
           );
@@ -207,26 +219,16 @@ export const submitExam = async (req, res) => {
               submittedAt: submittedAt,
             })
             .where(eq(results.studentExamId, sessionId));
-        });
-        action = "resubmitted_with_changes";
-      } else {
-        // No changes to answers, just update submission time
-        await db
-          .update(studentExams)
-          .set({
-            submittedAt: submittedAt,
-            updatedAt: new Date(),
-          })
-          .where(eq(studentExams.id, sessionId));
-
-        await db
-          .update(results)
-          .set({
-            submittedAt: submittedAt,
-          })
-          .where(eq(results.studentExamId, sessionId));
-        action = "resubmitted_no_changes";
-      }
+        } else {
+          await tx
+            .update(results)
+            .set({
+              submittedAt: submittedAt,
+            })
+            .where(eq(results.studentExamId, sessionId));
+        }
+      });
+      action = "resubmitted";
     } else {
       // First time submission
       await db.transaction(async (tx) => {
@@ -243,7 +245,7 @@ export const submitExam = async (req, res) => {
         await updateAnswerCorrectness(sessionId, scoreResult.answers);
         const rank = await calculateRank(
           exam.id,
-          sessionId, // ADDED: studentExamId parameter
+          sessionId,
           scoreResult.score,
           timeSpentMinutes
         );
@@ -258,7 +260,6 @@ export const submitExam = async (req, res) => {
           submittedAt: submittedAt,
         });
       });
-      action = "first_submission";
     }
 
     // Get the final result
@@ -268,15 +269,14 @@ export const submitExam = async (req, res) => {
       .where(eq(results.studentExamId, sessionId));
 
     const messages = {
-      first_submission: "Exam submitted successfully",
-      resubmitted_no_changes: "Exam re-submitted (no answer changes)",
-      resubmitted_with_changes: "Exam re-submitted with updated answers",
       submitted: "Exam submitted successfully",
+      auto_submitted: "Exam auto-submitted successfully",
+      resubmitted: "Exam re-submitted",
     };
 
     return res.status(200).json({
       success: true,
-      message: messages[action],
+      message: messages[action] || "Exam submitted",
       data: {
         result: finalResult,
         session: {
@@ -297,6 +297,7 @@ export const submitExam = async (req, res) => {
           new: newAnswersCount,
           updated: updatedAnswersCount,
         },
+        isAutoSubmit,
       },
     });
   } catch (error) {
@@ -326,7 +327,6 @@ export const submitExam = async (req, res) => {
 
 /**
  * Auto-submit exam (for timeouts/deadlines)
- * This is called by a cron job or when conditions are met
  */
 export const autoSubmitExam = async (studentExamId) => {
   try {
@@ -359,15 +359,17 @@ export const autoSubmitExam = async (studentExamId) => {
     // Calculate time spent (use exam duration if time expired)
     const startedAt = new Date(session.startedAt);
     const now = new Date();
-    let timeSpentMs = now - startedAt;
+    let timeSpentMinutes;
 
-    // If time expired, use full duration
+    // Check if time has expired
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
     if (now > durationEnd) {
-      timeSpentMs = exam.duration * 60000;
+      timeSpentMinutes = exam.duration; // Use full duration
+    } else {
+      const timeSpentMs = now - startedAt;
+      timeSpentMinutes = Math.floor(timeSpentMs / (1000 * 60));
     }
 
-    const timeSpentMinutes = Math.floor(timeSpentMs / (1000 * 60));
     const submittedAt = new Date();
 
     await db.transaction(async (tx) => {
@@ -385,10 +387,10 @@ export const autoSubmitExam = async (studentExamId) => {
       const scoreResult = await calculateScore(studentExamId);
       await updateAnswerCorrectness(studentExamId, scoreResult.answers);
 
-      // Calculate rank - NEEDS TO BE UPDATED
+      // Calculate rank
       const rank = await calculateRank(
         exam.id,
-        studentExamId, // ADDED: studentExamId parameter
+        studentExamId,
         scoreResult.score,
         timeSpentMinutes
       );

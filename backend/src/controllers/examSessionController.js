@@ -68,48 +68,158 @@ export const startExamSession = async (req, res) => {
       });
     }
 
-    // Check if student already has a session for this exam
-    const existingSessions = await db
-      .select()
-      .from(studentExams)
-      .where(
-        and(eq(studentExams.studentId, userId), eq(studentExams.examId, examId))
-      );
+    console.log(
+      "🔄 Checking for existing sessions - userId:",
+      userId,
+      "examId:",
+      examId
+    );
 
-    if (existingSessions.length > 0) {
-      const activeSession = existingSessions.find(
-        (session) => !session.submittedAt
-      );
-      const completedSession = existingSessions.find(
-        (session) => session.submittedAt
-      );
-
-      if (activeSession) {
-        // Has active session - return it
-        const remainingTime = calculateRemainingTime(
-          activeSession.startedAt,
-          exam.duration,
-          exam.availableUntil
+    // Use transaction to prevent race conditions
+    const result = await db.transaction(async (tx) => {
+      // Check if student already has a session for this exam WITHIN TRANSACTION
+      const existingSessions = await tx
+        .select()
+        .from(studentExams)
+        .where(
+          and(
+            eq(studentExams.studentId, userId),
+            eq(studentExams.examId, examId),
+            isNull(studentExams.submittedAt) // ← Only get ACTIVE sessions
+          )
         );
 
-        // Get saved answers
-        const savedAnswers = await db
-          .select({
-            questionId: answers.questionId,
-            chosenAnswer: answers.chosenAnswer,
-          })
-          .from(answers)
-          .where(eq(answers.studentExamId, activeSession.id));
+      console.log("📋 Found existing sessions:", existingSessions.length);
 
-        return res.status(200).json({
+      if (existingSessions.length > 0) {
+        const activeSession = existingSessions.find(
+          (session) => !session.submittedAt
+        );
+        const completedSession = existingSessions.find(
+          (session) => session.submittedAt
+        );
+
+        if (activeSession) {
+          console.log("🔄 Resuming active session:", activeSession.id);
+
+          // Has active session - return it
+          const remainingTime = calculateRemainingTime(
+            activeSession.startedAt,
+            exam.duration,
+            exam.availableUntil
+          );
+
+          // Get saved answers
+          const savedAnswers = await tx
+            .select({
+              questionId: answers.questionId,
+              chosenAnswer: answers.chosenAnswer,
+            })
+            .from(answers)
+            .where(eq(answers.studentExamId, activeSession.id));
+
+          // Get exam questions (without correct answers)
+          const examQuestions = await tx
+            .select({
+              id: questions.id,
+              questionText: questions.questionText,
+              optionA: questions.optionA,
+              optionB: questions.optionB,
+              optionC: questions.optionC,
+              optionD: questions.optionD,
+              subject: questions.subject,
+              difficulty: questions.difficulty,
+            })
+            .from(questions)
+            .where(eq(questions.examId, examId))
+            .orderBy(asc(questions.id));
+
+          return {
+            status: 200,
+            data: {
+              success: true,
+              message: "Resuming existing exam session",
+              data: {
+                session: {
+                  id: activeSession.id,
+                  startedAt: activeSession.startedAt,
+                  examId: activeSession.examId,
+                  submittedAt: activeSession.submittedAt,
+                },
+                exam: {
+                  id: exam.id,
+                  title: exam.title,
+                  description: exam.description,
+                  duration: exam.duration,
+                  totalQuestions: exam.totalQuestions,
+                  passingScore: exam.passingScore,
+                },
+                questions: examQuestions,
+                savedAnswers,
+                remainingTime,
+              },
+            },
+          };
+        } else if (completedSession) {
+          // Already completed - cannot retake
+          console.log("⛔ Exam already completed");
+          return {
+            status: 400,
+            data: {
+              success: false,
+              message: "You have already completed this exam",
+            },
+          };
+        }
+      }
+
+      console.log("🚀 Creating new exam session");
+      // Create new exam session
+      const [newSession] = await tx.insert(studentExams).values({
+        studentId: userId,
+        examId: examId,
+        startedAt: new Date(),
+        submittedAt: null,
+        timeSpent: 0,
+        updatedAt: new Date(),
+      });
+
+      const sessionId = newSession.insertId;
+      console.log("✅ Created new session ID:", sessionId);
+
+      // Get exam questions (without correct answers)
+      const examQuestions = await tx
+        .select({
+          id: questions.id,
+          questionText: questions.questionText,
+          optionA: questions.optionA,
+          optionB: questions.optionB,
+          optionC: questions.optionC,
+          optionD: questions.optionD,
+          subject: questions.subject,
+          difficulty: questions.difficulty,
+        })
+        .from(questions)
+        .where(eq(questions.examId, examId))
+        .orderBy(asc(questions.id));
+
+      const remainingTime = calculateRemainingTime(
+        new Date(),
+        exam.duration,
+        exam.availableUntil
+      );
+
+      return {
+        status: 201,
+        data: {
           success: true,
-          message: "Resuming existing exam session",
+          message: "Exam session started successfully",
           data: {
             session: {
-              id: activeSession.id,
-              startedAt: activeSession.startedAt,
-              examId: activeSession.examId,
-              submittedAt: activeSession.submittedAt,
+              id: sessionId,
+              startedAt: new Date(),
+              examId: examId,
+              submittedAt: null,
             },
             exam: {
               id: exam.id,
@@ -119,78 +229,97 @@ export const startExamSession = async (req, res) => {
               totalQuestions: exam.totalQuestions,
               passingScore: exam.passingScore,
             },
-            savedAnswers,
+            questions: examQuestions,
+            savedAnswers: [],
             remainingTime,
           },
-        });
-      } else if (completedSession) {
-        // Already completed - cannot retake
-        return res.status(400).json({
-          success: false,
-          message: "You have already completed this exam",
-        });
-      }
-    }
-
-    // Create new exam session
-    const [newSession] = await db.insert(studentExams).values({
-      studentId: userId,
-      examId: examId,
-      startedAt: new Date(),
-      submittedAt: null,
-      timeSpent: 0,
+        },
+      };
     });
 
-    const sessionId = newSession.insertId;
-
-    // Get exam questions (without correct answers)
-    const examQuestions = await db
-      .select({
-        id: questions.id,
-        questionText: questions.questionText,
-        optionA: questions.optionA,
-        optionB: questions.optionB,
-        optionC: questions.optionC,
-        optionD: questions.optionD,
-        subject: questions.subject,
-        difficulty: questions.difficulty,
-      })
-      .from(questions)
-      .where(eq(questions.examId, examId))
-      .orderBy(asc(questions.id));
-
-    const remainingTime = calculateRemainingTime(
-      new Date(),
-      exam.duration,
-      exam.availableUntil
-    );
-
-    return res.status(201).json({
-      success: true,
-      message: "Exam session started successfully",
-      data: {
-        session: {
-          id: sessionId,
-          startedAt: new Date(),
-          examId: examId,
-          submittedAt: null,
-        },
-        exam: {
-          id: exam.id,
-          title: exam.title,
-          description: exam.description,
-          duration: exam.duration,
-          totalQuestions: exam.totalQuestions,
-          passingScore: exam.passingScore,
-        },
-        questions: examQuestions,
-        remainingTime,
-      },
-    });
+    // Send the response
+    return res.status(result.status).json(result.data);
   } catch (error) {
-    console.error("Start exam session error:", error);
+    console.error("❌ Start exam session error:", error);
 
+    // Handle specific database errors
     if (error.code === "ER_DUP_ENTRY") {
+      // This should rarely happen now with transaction, but keep as safety
+      console.log(
+        "⚠️ Duplicate entry detected, trying to load existing session"
+      );
+
+      try {
+        // Try to get the existing session
+        const existingSessions = await db
+          .select()
+          .from(studentExams)
+          .where(
+            and(
+              eq(studentExams.studentId, req.user.userId),
+              eq(studentExams.examId, req.body.examId)
+            )
+          );
+
+        if (existingSessions.length > 0) {
+          const activeSession = existingSessions.find((s) => !s.submittedAt);
+          if (activeSession) {
+            // Get questions and return existing session
+            const examQuestions = await db
+              .select({
+                id: questions.id,
+                questionText: questions.questionText,
+                optionA: questions.optionA,
+                optionB: questions.optionB,
+                optionC: questions.optionC,
+                optionD: questions.optionD,
+                subject: questions.subject,
+                difficulty: questions.difficulty,
+              })
+              .from(questions)
+              .where(eq(questions.examId, req.body.examId))
+              .orderBy(asc(questions.id));
+
+            const [exam] = await db
+              .select()
+              .from(exams)
+              .where(eq(exams.id, req.body.examId));
+
+            const remainingTime = calculateRemainingTime(
+              activeSession.startedAt,
+              exam.duration,
+              exam.availableUntil
+            );
+
+            return res.status(200).json({
+              success: true,
+              message: "Resuming existing exam session",
+              data: {
+                session: {
+                  id: activeSession.id,
+                  startedAt: activeSession.startedAt,
+                  examId: activeSession.examId,
+                  submittedAt: activeSession.submittedAt,
+                },
+                exam: {
+                  id: exam.id,
+                  title: exam.title,
+                  description: exam.description,
+                  duration: exam.duration,
+                  totalQuestions: exam.totalQuestions,
+                  passingScore: exam.passingScore,
+                },
+                questions: examQuestions,
+                savedAnswers: [],
+                remainingTime,
+              },
+            });
+          }
+        }
+      } catch (fallbackError) {
+        console.error("Fallback error:", fallbackError);
+      }
+
       return res.status(409).json({
         success: false,
         message: "An active session already exists for this exam",
@@ -204,13 +333,14 @@ export const startExamSession = async (req, res) => {
       });
     }
 
+    // Generic error
     return res.status(500).json({
       success: false,
       message: "Failed to start exam session",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-
 /**
  * Get active exam session for student
  */
@@ -466,11 +596,36 @@ export const saveAnswer = async (req, res) => {
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
 
     if (now > durationEnd) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Exam time has expired. No further answer submissions allowed.",
-      });
+      // Time expired - try to auto-submit
+      try {
+        // Import autoSubmit function
+        const { autoSubmitExam } = await import(
+          "../controllers/submissionController.js"
+        );
+
+        // Auto-submit the exam
+        const autoSubmitResult = await autoSubmitExam(sessionId);
+
+        if (autoSubmitResult.success) {
+          return res.status(400).json({
+            success: false,
+            message: "Exam time has expired. Exam has been auto-submitted.",
+            autoSubmitted: true,
+            result: autoSubmitResult,
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: "Exam time has expired. Failed to auto-submit exam.",
+          });
+        }
+      } catch (autoSubmitError) {
+        console.error("Auto-submit error:", autoSubmitError);
+        return res.status(400).json({
+          success: false,
+          message: "Exam time has expired. Auto-submission failed.",
+        });
+      }
     }
 
     // Check if question belongs to this exam
@@ -618,6 +773,9 @@ export const saveMultipleAnswers = async (req, res) => {
         success: false,
         message:
           "Exam time has expired. No further answer submissions allowed.",
+        timeExpired: true, // Add this flag
+        sessionId: sessionId,
+        examId: exam.id,
       });
     }
 
@@ -752,7 +910,11 @@ export const resumeSession = async (req, res) => {
     if (now > availableUntil) {
       return res.status(400).json({
         success: false,
-        message: "Exam submission deadline has passed",
+        message:
+          "Exam time has expired. No further answer submissions allowed.",
+        timeExpired: true, // Add this flag
+        sessionId: sessionId,
+        examId: exam.id,
       });
     }
 

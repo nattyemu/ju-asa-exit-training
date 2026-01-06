@@ -4,11 +4,11 @@ import { CheckCircle, Circle } from "lucide-react";
 export const QuestionCard = ({
   question,
   selectedAnswer,
-  onSelect,
+  onAnswerSelect,
   questionNumber,
   totalQuestions,
-  isAnswered,
-  subject,
+  isSubmitting,
+  timeExpired = false,
 }) => {
   const options = [
     { key: "A", value: question.optionA },
@@ -17,18 +17,40 @@ export const QuestionCard = ({
     { key: "D", value: question.optionD },
   ];
 
-  const getOptionLetter = (index) => {
-    return String.fromCharCode(65 + index); // A, B, C, D
+  // Check if this question is answered
+  const isAnswered = selectedAnswer !== undefined && selectedAnswer !== null;
+
+  const handleOptionClick = (optionKey) => {
+    // Disable if time expired or submitting
+    if (timeExpired || isSubmitting || !onAnswerSelect) return;
+
+    console.log("QuestionCard: Option selected:", {
+      questionId: question.id,
+      option: optionKey,
+      questionNumber,
+      chosenAnswer: optionKey,
+    });
+    onAnswerSelect(optionKey);
   };
 
   return (
     <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+      {/* Time expired warning */}
+      {timeExpired && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700 font-medium">
+            ⏰ Exam time has expired. You can review questions but cannot change
+            answers.
+          </p>
+        </div>
+      )}
+
       {/* Question Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-              {subject}
+              {question.subject}
             </span>
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
               {question.difficulty}
@@ -65,19 +87,25 @@ export const QuestionCard = ({
 
       {/* Options */}
       <div className="space-y-3">
-        {options.map((option, index) => {
-          const optionKey = getOptionLetter(index);
-          const isSelected = selectedAnswer === optionKey;
+        {options.map((option) => {
+          const isSelected = selectedAnswer === option.key;
 
           return (
             <button
-              key={optionKey}
-              onClick={() => onSelect(question.id, optionKey)}
-              className={`w-full text-left p-4 rounded-lg border transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                isSelected
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                  : "border-border hover:border-primary/50 hover:bg-primary/2"
-              }`}
+              key={option.key}
+              onClick={() => handleOptionClick(option.key)}
+              disabled={timeExpired || isSubmitting}
+              className={`w-full text-left p-4 rounded-lg border transition-all duration-200 
+                ${
+                  timeExpired
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:scale-[1.02] active:scale-[0.98]"
+                }
+                disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50 hover:bg-primary/2"
+                }`}
             >
               <div className="flex items-start gap-4">
                 <div
@@ -87,7 +115,7 @@ export const QuestionCard = ({
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {optionKey}
+                  {option.key}
                 </div>
                 <div className="flex-1">
                   <p className="text-text-primary leading-relaxed">
@@ -102,6 +130,12 @@ export const QuestionCard = ({
           );
         })}
       </div>
+
+      {isSubmitting && (
+        <div className="absolute top-2 right-2">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
     </div>
   );
 };

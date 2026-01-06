@@ -1,10 +1,20 @@
 import { AlertCircle } from "lucide-react";
 import { LoadingSpinner } from "../../common/LoadingSpinner";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 const SubjectPerformanceChart = ({ subjectData, isLoading, examStats }) => {
   if (isLoading) {
     return (
-      <div className="h-48 w-full bg-gray-50 rounded-lg p-4 flex items-center justify-center">
+      <div className="h-64 w-full bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-center">
         <LoadingSpinner size="sm" />
       </div>
     );
@@ -12,95 +22,207 @@ const SubjectPerformanceChart = ({ subjectData, isLoading, examStats }) => {
 
   if (!subjectData || subjectData.length === 0) {
     return (
-      <div className="h-48 w-full bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center">
-        <AlertCircle className="w-8 h-8 text-gray-400 mb-2" />
-        <span className="text-sm text-text-secondary">No subject data</span>
-      </div>
-    );
-  }
-
-  const validSubjects = subjectData.filter(
-    (subject) => subject.participants > 0
-  );
-
-  if (validSubjects.length === 0) {
-    return (
-      <div className="h-48 w-full bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center">
-        <AlertCircle className="w-8 h-8 text-gray-400 mb-2" />
-        <span className="text-sm text-text-secondary">
-          No completed subject data
+      <div className="h-64 w-full bg-white rounded-lg p-4 border border-gray-200 flex flex-col items-center justify-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+          <AlertCircle className="w-8 h-8 text-gray-400" />
+        </div>
+        <span className="text-sm font-medium text-gray-600 mb-1">
+          No Subject Data
+        </span>
+        <span className="text-xs text-gray-500 text-center">
+          Select an exam with subject performance data
         </span>
       </div>
     );
   }
 
-  const sortedSubjects = [...validSubjects].sort(
-    (a, b) => b.avgScore - a.avgScore
-  );
-  const topSubject = sortedSubjects[0];
+  // Process data for Recharts
+  const processChartData = () => {
+    if (subjectData[0]?.subject && subjectData[0]?.avgScore !== undefined) {
+      return subjectData.map((item) => ({
+        subject: item.subject,
+        score: item.avgScore || 0,
+        participants: item.participants || 0,
+        difficulty: item.difficulty || "MEDIUM",
+      }));
+    }
+    if (subjectData[0]?.name && subjectData[0]?.score !== undefined) {
+      return subjectData.map((item) => ({
+        subject: item.name,
+        score: item.score || 0,
+        participants: item.count || 0,
+      }));
+    }
+    if (subjectData[0]?.label && subjectData[0]?.value !== undefined) {
+      return subjectData.map((item) => ({
+        subject: item.label,
+        score: item.value || 0,
+        participants: item.questions || 0,
+      }));
+    }
+    return subjectData.map((item, index) => ({
+      subject: `Subject ${index + 1}`,
+      score: item || 0,
+    }));
+  };
 
-  const maxScore = Math.max(...sortedSubjects.map((item) => item.avgScore));
-  const minScore = Math.min(...sortedSubjects.map((item) => item.avgScore));
+  const chartData = processChartData()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6); // Show top 6 subjects
 
-  const scoreRange = maxScore - minScore;
-  const displayMax = scoreRange === 0 ? Math.max(maxScore, 10) : maxScore;
+  // Beautiful gradient colors for subjects
+  const subjectColors = [
+    "#8b5cf6", // Purple
+    "#3b82f6", // Blue
+    "#10b981", // Emerald
+    "#f59e0b", // Amber
+    "#ef4444", // Red
+    "#ec4899", // Pink
+  ];
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 min-w-[200px]">
+          <p className="font-medium text-gray-900">{data.subject}</p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Score:</span>
+              <span className="font-semibold text-gray-900">{data.score}%</span>
+            </div>
+            {data.participants && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Questions:</span>
+                <span className="font-semibold text-gray-900">
+                  {data.participants}
+                </span>
+              </div>
+            )}
+            {data.difficulty && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Difficulty:</span>
+                <span
+                  className={`font-semibold ${
+                    data.difficulty === "EASY"
+                      ? "text-green-600"
+                      : data.difficulty === "MEDIUM"
+                      ? "text-yellow-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {data.difficulty}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="h-48 w-full bg-gray-50 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-text-primary">
-          Subject Performance
-        </span>
-        <span className="text-xs text-text-secondary">
-          Top {Math.min(sortedSubjects.length, 5)} Subjects
-        </span>
-      </div>
-
-      <div className="h-24 flex items-end gap-2 mb-2">
-        {sortedSubjects.slice(0, 5).map((item, i) => {
-          const height =
-            displayMax > 0
-              ? Math.max((item.avgScore / displayMax) * 90, 10)
-              : 10;
-
-          return (
-            <div key={i} className="flex-1 flex flex-col items-center">
-              <div
-                className={`w-full rounded-t transition-all duration-300 ${
-                  item.avgScore >= 70
-                    ? "bg-green-500 hover:bg-green-600"
-                    : item.avgScore >= 50
-                    ? "bg-yellow-500 hover:bg-yellow-600"
-                    : "bg-red-500 hover:bg-red-600"
-                }`}
-                style={{
-                  height: `${height}%`,
-                }}
-                title={`${item.subject}: ${item.avgScore}% (${item.participants} questions)`}
-              ></div>
-              <span className="text-xs font-medium text-text-primary mt-1 truncate w-full text-center px-1">
-                {item.subject.substring(0, 8)}
-                {item.subject.length > 8 ? "..." : ""}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="space-y-1 mt-2">
-        <div className="text-xs text-text-primary font-medium text-center">
-          {sortedSubjects.length} subject
-          {sortedSubjects.length !== 1 ? "s" : ""}
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">
+            Subject Performance
+          </h3>
+          <p className="text-xs text-gray-500">Average scores by subject</p>
         </div>
-        {topSubject && (
-          <div className="text-xs text-text-secondary text-center">
-            Top:{" "}
-            <span className="font-semibold text-primary-dark">
-              {topSubject.subject}
-            </span>{" "}
-            ({topSubject.avgScore}%)
+        <div className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600">
+          Top {chartData.length} subjects
+        </div>
+      </div>
+
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 30 }}
+            layout="vertical" // Horizontal bars
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#f3f4f6"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              domain={[0, 100]}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tickFormatter={(value) => `${value}%`}
+            />
+            <YAxis
+              type="category"
+              dataKey="subject"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#374151", fontSize: 12, fontWeight: 500 }}
+              width={80}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ fill: "rgba(243, 244, 246, 0.5)" }}
+            />
+            <Bar
+              dataKey="score"
+              radius={[0, 4, 4, 0]}
+              barSize={20}
+              animationDuration={1500}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={subjectColors[index % subjectColors.length]}
+                  strokeWidth={0}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Performance indicators */}
+      <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="text-center p-2 bg-blue-50 rounded-lg">
+          <div className="text-xs text-gray-600">Highest</div>
+          <div className="text-lg font-bold text-blue-700">
+            {chartData.length > 0 ? `${chartData[0].score}%` : "N/A"}
           </div>
-        )}
+          <div className="text-xs text-gray-500 truncate">
+            {chartData.length > 0 ? chartData[0].subject : ""}
+          </div>
+        </div>
+        <div className="text-center p-2 bg-gray-50 rounded-lg">
+          <div className="text-xs text-gray-600">Average</div>
+          <div className="text-lg font-bold text-gray-700">
+            {chartData.length > 0
+              ? `${Math.round(
+                  chartData.reduce((sum, item) => sum + item.score, 0) /
+                    chartData.length
+                )}%`
+              : "N/A"}
+          </div>
+          <div className="text-xs text-gray-500">All subjects</div>
+        </div>
+        <div className="text-center p-2 bg-red-50 rounded-lg">
+          <div className="text-xs text-gray-600">Lowest</div>
+          <div className="text-lg font-bold text-red-700">
+            {chartData.length > 0
+              ? `${chartData[chartData.length - 1].score}%`
+              : "N/A"}
+          </div>
+          <div className="text-xs text-gray-500 truncate">
+            {chartData.length > 0
+              ? chartData[chartData.length - 1].subject
+              : ""}
+          </div>
+        </div>
       </div>
     </div>
   );

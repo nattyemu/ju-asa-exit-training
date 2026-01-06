@@ -1,7 +1,21 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { Download, Calendar, Eye, EyeOff, BookOpen } from "lucide-react";
+import {
+  Download,
+  Calendar,
+  Eye,
+  EyeOff,
+  BookOpen,
+  Trophy,
+  Crown,
+  Medal,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Clock,
+} from "lucide-react";
 import { adminService } from "../../services/adminService";
+import { examService } from "../../services/examService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useLocation } from "react-router-dom";
 import ScoreDistributionChart from "./analytics/ScoreDistributionChart";
@@ -11,19 +25,34 @@ import ExportModal from "./analytics/ExportModal";
 import InfoModal from "./analytics/InfoModal";
 import StatsCards from "./analytics/StatsCards";
 import SubjectTable from "./analytics/SubjectTable";
-import AdvancedAnalytics from "./analytics/AdvancedAnalytics";
-// Import new components
+// import AdvancedAnalytics from "./analytics/AdvancedAnalytics";
+import { ImageModal } from "../common/ImageModal";
 
 export const AnalyticsDashboard = () => {
   const location = useLocation();
   const [selectedExam, setSelectedExam] = useState(() => {
-    // Get examId from navigation state
     return location.state?.examId || null;
   });
   const [timeRange, setTimeRange] = useState("week");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState([]);
+
+  // State for exam rankings
+  const [examRankings, setExamRankings] = useState({
+    rankings: [],
+    examTitle: "",
+    totalParticipants: 0,
+  });
+  const [loadingRankings, setLoadingRankings] = useState(false);
+  const [showAllRankings, setShowAllRankings] = useState(false);
+
+  // State for image modal
+  const [imageModal, setImageModal] = useState({
+    isOpen: false,
+    imageUrl: null,
+    alt: "",
+  });
 
   // Analytics data states
   const [analyticsData, setAnalyticsData] = useState({
@@ -53,6 +82,57 @@ export const AnalyticsDashboard = () => {
       console.error("Failed to load exams:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load rankings for selected exam - UPDATED FIX
+  const loadExamRankings = async (examId) => {
+    if (!examId) {
+      setExamRankings({
+        rankings: [],
+        examTitle: "",
+        totalParticipants: 0,
+      });
+      return;
+    }
+
+    try {
+      setLoadingRankings(true);
+      const rankingsRes = await examService.getRankings(examId, 100);
+
+      if (rankingsRes.data?.success && rankingsRes.data.data?.rankings) {
+        // Try to get exam title from multiple sources
+        const selectedExamDetails = exams.find((e) => e.id === examId);
+        const examTitleFromRankings = rankingsRes.data.data.examTitle;
+
+        setExamRankings({
+          rankings: rankingsRes.data.data.rankings || [],
+          examTitle:
+            selectedExamDetails?.title ||
+            examTitleFromRankings ||
+            "Selected Exam",
+          totalParticipants: rankingsRes.data.data.totalParticipants || 0,
+        });
+      } else {
+        // Even if no rankings, set the exam title if we have it
+        const selectedExamDetails = exams.find((e) => e.id === examId);
+        setExamRankings({
+          rankings: [],
+          examTitle: selectedExamDetails?.title || "Selected Exam",
+          totalParticipants: 0,
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to load rankings for exam ${examId}:`, error);
+      // Still try to get title from exams list
+      const selectedExamDetails = exams.find((e) => e.id === examId);
+      setExamRankings({
+        rankings: [],
+        examTitle: selectedExamDetails?.title || "Selected Exam",
+        totalParticipants: 0,
+      });
+    } finally {
+      setLoadingRankings(false);
     }
   };
 
@@ -276,6 +356,49 @@ export const AnalyticsDashboard = () => {
     setSelectedExam(examId);
   };
 
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith("http")) return imageUrl;
+    if (imageUrl.startsWith("blob:")) return imageUrl;
+
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+    if (!imageUrl.startsWith("/")) {
+      imageUrl = "/" + imageUrl;
+    }
+
+    return backendUrl + imageUrl;
+  };
+
+  // Handle image error
+  const handleImageError = (e) => {
+    e.target.style.display = "none";
+    const fallbackElement = e.target.nextElementSibling;
+    if (fallbackElement && fallbackElement.style) {
+      fallbackElement.style.display = "flex";
+    }
+  };
+
+  // Open image modal
+  const openImageModal = (imageUrl, alt = "") => {
+    setImageModal({
+      isOpen: true,
+      imageUrl: getProfileImageUrl(imageUrl),
+      alt,
+    });
+  };
+
+  // Close image modal
+  const closeImageModal = () => {
+    setImageModal({
+      isOpen: false,
+      imageUrl: null,
+      alt: "",
+    });
+  };
+
   useEffect(() => {
     loadExams();
   }, []);
@@ -283,6 +406,7 @@ export const AnalyticsDashboard = () => {
   useEffect(() => {
     if (selectedExam) {
       loadAnalyticsData(selectedExam);
+      loadExamRankings(selectedExam);
     }
   }, [selectedExam]);
 
@@ -291,6 +415,14 @@ export const AnalyticsDashboard = () => {
 
   return (
     <div>
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={imageModal.isOpen}
+        imageUrl={imageModal.imageUrl}
+        alt={imageModal.alt}
+        onClose={closeImageModal}
+      />
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         <div>
@@ -317,8 +449,7 @@ export const AnalyticsDashboard = () => {
               <option value="year">This Year</option>
             </select>
           </div>
-
-          <button
+          {/* <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-gray-50 transition-colors text-sm"
           >
@@ -328,8 +459,7 @@ export const AnalyticsDashboard = () => {
               <Eye className="w-4 h-4" />
             )}
             {showAdvanced ? "Basic View" : "Advanced View"}
-          </button>
-
+          </button> */}
           <button
             onClick={handleExportClick}
             className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -362,12 +492,6 @@ export const AnalyticsDashboard = () => {
               ))}
             </select>
           </div>
-          {/* {selectedExam && selectedExamDetails && (
-            <div className="text-sm text-text-secondary">
-              <span className="font-medium">Selected: </span>
-              {selectedExamDetails.title}
-            </div>
-          )} */}
         </div>
       </div>
 
@@ -390,6 +514,208 @@ export const AnalyticsDashboard = () => {
         <>
           {/* Stats Cards */}
           <StatsCards examStats={analyticsData.examStats} />
+
+          {/* Exam Rankings Section - FIXED TITLE DISPLAY */}
+          <div className="bg-white rounded-xl border border-border p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-600" />
+                <h3 className="font-medium text-text-primary">Exam Rankings</h3>
+              </div>
+            </div>
+
+            {/* Rankings Display */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="font-medium text-text-primary">
+                    {selectedExamDetails?.title ||
+                      examRankings.examTitle ||
+                      "Selected Exam"}{" "}
+                    - Student Rankings
+                  </h4>
+                  <p className="text-sm text-text-secondary">
+                    Total participants: {examRankings.totalParticipants}{" "}
+                    students
+                  </p>
+                </div>
+                <div className="text-xs text-text-secondary">
+                  {examRankings.totalParticipants} participants
+                </div>
+              </div>
+
+              {/* Rankings List */}
+              {loadingRankings ? (
+                <div className="py-8 text-center">
+                  <LoadingSpinner size="md" />
+                  <p className="mt-2 text-text-secondary">
+                    Loading rankings...
+                  </p>
+                </div>
+              ) : examRankings.rankings.length > 0 ? (
+                <div className="relative min-h-[240px]">
+                  {/* Scrollable container */}
+                  <div
+                    className={`space-y-3 overflow-y-auto ${
+                      showAllRankings ? "h-[400px]" : "h-[200px]"
+                    }`}
+                    style={{
+                      scrollbarWidth: "thin",
+                      scrollbarColor: "#cbd5e1 #f1f5f9",
+                    }}
+                  >
+                    {examRankings.rankings
+                      .slice(0, showAllRankings ? undefined : 5)
+                      .map((student, index) => {
+                        const scoreValue = student.score || 0;
+                        const studentName =
+                          student.student?.profile?.fullName ||
+                          student.fullName ||
+                          student.name ||
+                          student.student?.email?.split("@")[0] ||
+                          `Student ${index + 1}`;
+                        const profileImageUrl =
+                          student.student?.profile?.profileImageUrl;
+
+                        // Fixed time display - timeSpent is already in minutes
+                        const timeTaken =
+                          student.timeSpent !== undefined &&
+                          student.timeSpent !== null
+                            ? student.timeSpent === 0 && student.score > 0
+                              ? "< 1m"
+                              : `${student.timeSpent}m`
+                            : "N/A";
+
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 rounded-lg transition-colors border border-transparent hover:border-gray-200 hover:bg-gray-50"
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Rank Number */}
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+                                  index === 0
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                    : index === 1
+                                    ? "bg-gray-100 text-gray-800 border-gray-300"
+                                    : index === 2
+                                    ? "bg-orange-100 text-orange-800 border-orange-300"
+                                    : "bg-blue-100 text-blue-800 border-blue-300"
+                                }`}
+                              >
+                                {index === 0 ? (
+                                  <Crown className="w-4 h-4" />
+                                ) : index === 1 || index === 2 ? (
+                                  <Medal className="w-4 h-4" />
+                                ) : (
+                                  `#${index + 1}`
+                                )}
+                              </div>
+
+                              {/* Profile Image */}
+                              <div className="relative group">
+                                <div
+                                  className="w-10 h-10 rounded-full overflow-hidden border border-border cursor-pointer transition-transform duration-200 hover:scale-110 hover:shadow-lg"
+                                  onClick={() => {
+                                    if (profileImageUrl) {
+                                      openImageModal(
+                                        profileImageUrl,
+                                        studentName
+                                      );
+                                    }
+                                  }}
+                                >
+                                  {profileImageUrl ? (
+                                    <>
+                                      <img
+                                        src={getProfileImageUrl(
+                                          profileImageUrl
+                                        )}
+                                        alt={studentName}
+                                        className="w-full h-full object-cover"
+                                        onError={handleImageError}
+                                      />
+                                    </>
+                                  ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
+                                      <span className="text-white font-bold text-sm">
+                                        {studentName[0]?.toUpperCase() || "S"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Student Info */}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm text-text-primary truncate">
+                                  {studentName}
+                                </div>
+                                <div className="text-xs text-text-secondary truncate">
+                                  {student.student?.profile?.department ||
+                                    student.department ||
+                                    "General Department"}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Score and Time */}
+                            <div className="text-right flex-shrink-0 ml-2">
+                              <div
+                                className={`font-bold ${
+                                  scoreValue >= 80
+                                    ? "text-green-600"
+                                    : scoreValue >= 60
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {scoreValue}%
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-text-secondary">
+                                <Clock className="w-3 h-3" />
+                                {timeTaken}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Show more/less button */}
+                  {examRankings.rankings.length > 5 && (
+                    <div className="mt-4 pt-4 border-t border-border text-center">
+                      <button
+                        onClick={() => setShowAllRankings(!showAllRankings)}
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium px-4 py-2 rounded-lg hover:bg-primary/5 transition-colors"
+                      >
+                        {showAllRankings ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Show Less (Top 5)
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            View All {examRankings.rankings.length} Students
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-text-secondary">
+                  <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p>No rankings available for this exam yet.</p>
+                  <p className="text-sm mt-1">
+                    Students need to complete the exam to appear in rankings.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -438,15 +764,6 @@ export const AnalyticsDashboard = () => {
             selectedExam={selectedExam}
             onExport={handleExport}
           />
-
-          {/* Advanced Analytics Section */}
-          {showAdvanced && (
-            <AdvancedAnalytics
-              timeAnalytics={analyticsData.timeAnalytics}
-              questionAnalysis={analyticsData.questionAnalysis}
-              difficultyData={analyticsData.difficultyData}
-            />
-          )}
         </>
       )}
 

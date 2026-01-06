@@ -4,9 +4,11 @@ import React, {
   useContext,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { examService } from "../services/examService";
 import { useAuth } from "./AuthContext";
+import toast from "react-hot-toast";
 
 const ExamContext = createContext({});
 
@@ -17,32 +19,83 @@ export const ExamProvider = ({ children }) => {
   const [currentSession, setCurrentSession] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
+  const hasLoadedSessionRef = useRef(false);
+
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
     seconds: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [needsAutoSubmit, setNeedsAutoSubmit] = useState(false);
   const { user } = useAuth();
+
+  // Load answers from localStorage on mount
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      const savedAnswers = localStorage.getItem("exam_answers_backup");
+      if (savedAnswers) {
+        try {
+          const parsed = JSON.parse(savedAnswers);
+          if (parsed.sessionId && parsed.answers) {
+            setAnswers(parsed.answers);
+          }
+        } catch (error) {
+          localStorage.removeItem("exam_answers_backup");
+        }
+      }
+    }
+  }, [user]);
+
+  // Save answers to localStorage whenever they change
+  useEffect(() => {
+    if (currentSession?.id && Object.keys(answers).length > 0) {
+      const backup = {
+        sessionId: currentSession.id,
+        examId: currentExam?.id,
+        answers,
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem("exam_answers_backup", JSON.stringify(backup));
+    }
+  }, [answers, currentSession, currentExam]);
 
   // Load active session on mount
   useEffect(() => {
-    if (user?.role === "STUDENT") {
+    if (user?.role === "STUDENT" && !currentSession) {
       loadActiveSession();
     }
-  }, [user]);
+  }, [user, currentSession]);
 
   const loadActiveSession = async () => {
     try {
       setIsLoading(true);
+      console.log("🔄 ExamContext: Loading active session...");
+
       const response = await examService.getActiveSession();
+
       if (response.data.success && response.data.data) {
-        const { session, exam, questions, savedAnswers, remainingTime } =
-          response.data.data;
+        const {
+          session,
+          exam,
+          questions,
+          savedAnswers,
+          remainingTime,
+          needsAutoSubmit,
+        } = response.data.data;
+
+        // If session needs auto-submit, DO NOT load it
+        if (needsAutoSubmit) {
+          console.log("⚠️ ExamContext: Session needs auto-submit, skipping");
+          return;
+        }
+
+        console.log("✅ ExamContext: Session loaded:", session.id);
 
         setCurrentSession(session);
         setCurrentExam(exam);
-        setQuestions(questions);
+        setQuestions(questions || []);
+        setNeedsAutoSubmit(false);
 
         // Convert saved answers to object
         const answersObj = {};
@@ -51,61 +104,133 @@ export const ExamProvider = ({ children }) => {
         });
         setAnswers(answersObj);
 
-        setTimeLeft(remainingTime);
+        // Convert remainingTime from seconds to hours/minutes/seconds
+        if (remainingTime && remainingTime.total > 0) {
+          const totalSeconds = Math.floor(remainingTime.total / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const seconds = totalSeconds % 60;
+          setTimeLeft({ hours, minutes, seconds });
+        } else {
+          setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        }
+
+        return true; // Successfully loaded
+      } else {
+        console.log("📭 ExamContext: No active session found");
+        return false; // No session
       }
     } catch (error) {
-      console.error("No active session or error:", error);
+      console.log("📭 ExamContext: No active session or error:", error.message);
+      return false; // Error or no session
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Update the useEffect that loads on mount
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      console.log("🚀 ExamContext: User is student, loading session...");
+      loadActiveSession();
+    } else {
+      console.log("👤 ExamContext: User is not student, clearing session");
+      clearExamState();
+    }
+  }, [user]);
+
+  // Reset when user changes
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      hasLoadedSessionRef.current = false; // Reset for new user
+      loadActiveSession();
+    } else {
+      clearExamState();
+      hasLoadedSessionRef.current = false;
+    }
+  }, [user]);
+  // Update the useEffect that loads on mount
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      console.log("🚀 ExamContext: User is student, loading session...");
+      loadActiveSession();
+    } else {
+      console.log("👤 ExamContext: User is not student, clearing session");
+      clearExamState();
+    }
+  }, [user]);
+
   const startExam = async (examId) => {
+    // This function should ONLY resume existing sessions
+    // Dashboard should create new sessions
+
     try {
-      setIsLoading(true);
-      const response = await examService.startExam(examId);
-      if (response.data.success) {
-        const { session, exam, questions, savedAnswers, remainingTime } =
-          response.data.data;
+      console.log("🔄 ExamContext: Loading existing session for exam:", examId);
 
-        setCurrentSession(session);
-        setCurrentExam(exam);
-        setQuestions(questions);
+      // Try to get active session
+      const response = await examService.getActiveSession();
 
-        const answersObj = {};
-        savedAnswers?.forEach((answer) => {
-          answersObj[answer.questionId] = answer.chosenAnswer;
-        });
-        setAnswers(answersObj);
+      if (response.data.success && response.data.data) {
+        const { session, exam } = response.data.data;
 
-        setTimeLeft(remainingTime);
-        return { success: true, sessionId: session.id };
+        // Verify it's the right exam
+        if (session.examId !== examId) {
+          return {
+            success: false,
+            message: `You have an active session for a different exam. Please complete it first.`,
+            wrongExam: true,
+            activeExamId: session.examId,
+          };
+        }
+
+        // Load the existing session data
+        await loadActiveSession();
+        return {
+          success: true,
+          message: "Loaded existing session",
+          isResumed: true,
+        };
       }
-      return { success: false, message: response.data.message };
-    } catch (error) {
+
+      // No active session found
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to start exam",
+        message:
+          "No active session found. Please start the exam from dashboard.",
+        redirectToDashboard: true,
       };
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error("❌ ExamContext load error:", error);
+      return {
+        success: false,
+        message: "Failed to load exam session",
+      };
     }
   };
 
   const saveAnswer = async (questionId, chosenAnswer, isAutosave = false) => {
-    if (!currentSession)
+    if (!currentSession) {
+      console.error("No active session when trying to save answer");
       return { success: false, message: "No active session" };
+    }
 
     try {
-      // Update local state immediately for better UX
+      // Update local state immediately
       setAnswers((prev) => ({ ...prev, [questionId]: chosenAnswer }));
 
-      // Save to server
+      // Add autosave header if it's an auto-save
+      const config = isAutosave
+        ? {
+            headers: { "X-Autosave": "true" },
+          }
+        : {};
+
       const response = await examService.saveAnswer(
         currentSession.id,
         questionId,
         chosenAnswer,
-        isAutosave
+        isAutosave,
+        config
       );
 
       return {
@@ -113,12 +238,25 @@ export const ExamProvider = ({ children }) => {
         message: response.data.message,
       };
     } catch (error) {
-      // Revert local state on error
-      setAnswers((prev) => {
-        const newAnswers = { ...prev };
-        delete newAnswers[questionId];
-        return newAnswers;
-      });
+      console.error("Save answer error in context:", error);
+
+      // Don't revert on network errors during auto-save
+      if (!isAutosave || error.code !== "ERR_NETWORK") {
+        setAnswers((prev) => {
+          const newAnswers = { ...prev };
+          delete newAnswers[questionId];
+          return newAnswers;
+        });
+      }
+
+      if (error.response?.status === 400 && error.response.data.timeExpired) {
+        setNeedsAutoSubmit(true);
+        return {
+          success: false,
+          message: error.response.data.message,
+          timeExpired: true,
+        };
+      }
 
       return {
         success: false,
@@ -127,22 +265,110 @@ export const ExamProvider = ({ children }) => {
     }
   };
 
-  const submitExam = async () => {
-    if (!currentSession)
-      return { success: false, message: "No active session" };
+  const saveAllAnswers = async () => {
+    if (!currentSession || !questions.length)
+      return { success: false, message: "No active session or questions" };
 
     try {
-      const response = await examService.submitExam(currentSession.id);
+      const answersArray = Object.entries(answers).map(
+        ([questionId, chosenAnswer]) => ({
+          questionId: parseInt(questionId),
+          chosenAnswer,
+        })
+      );
+
+      if (answersArray.length === 0) {
+        return { success: true, message: "No answers to save" };
+      }
+
+      const response = await examService.saveAnswersBatch(
+        currentSession.id,
+        answersArray
+      );
+
+      // Clear localStorage backup after successful save
+      localStorage.removeItem("exam_answers_backup");
+
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        count: answersArray.length,
+      };
+    } catch (error) {
+      console.error("Save all answers error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to save answers",
+      };
+    }
+  };
+
+  const handleAutoSubmit = async () => {
+    if (!currentSession || !currentExam) return;
+
+    try {
+      const response = await examService.submitExam(currentSession.id, true);
       if (response.data.success) {
         // Clear exam state
-        setCurrentSession(null);
-        setCurrentExam(null);
-        setQuestions([]);
-        setAnswers({});
+        clearExamState();
+
+        toast.success("Exam auto-submitted due to time expiration");
+
+        // Clear localStorage backup
+        localStorage.removeItem("exam_answers_backup");
+
         return { success: true, data: response.data.data };
       }
       return { success: false, message: response.data.message };
     } catch (error) {
+      console.error("Auto-submit failed:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Auto-submit failed",
+      };
+    }
+  };
+
+  const submitExam = async (isAutoSubmit = false) => {
+    if (!currentSession)
+      return { success: false, message: "No active session" };
+
+    try {
+      // Save any remaining answers first
+      await saveAllAnswers();
+
+      const response = await examService.submitExam(
+        currentSession.id,
+        isAutoSubmit
+      );
+
+      if (response.data.success) {
+        clearExamState();
+        return {
+          success: true,
+          data: response.data.data,
+          isAutoSubmit,
+        };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error("Submit exam error:", error);
+
+      if (error.response?.status === 400) {
+        if (error.response.data.message?.includes("already submitted")) {
+          clearExamState();
+          return {
+            success: false,
+            message: "Exam already submitted",
+            redirect: true,
+          };
+        }
+
+        if (error.response.data.timeExpired && !isAutoSubmit) {
+          return await handleAutoSubmit();
+        }
+      }
+
       return {
         success: false,
         message: error.response?.data?.message || "Failed to submit exam",
@@ -155,13 +381,9 @@ export const ExamProvider = ({ children }) => {
       return { success: false, message: "No active session" };
 
     try {
-      const response = await examService.cancelSession(currentSession.id);
+      const response = await examService.deleteSession(currentSession.id);
       if (response.data.success) {
-        // Clear exam state
-        setCurrentSession(null);
-        setCurrentExam(null);
-        setQuestions([]);
-        setAnswers({});
+        clearExamState();
         return { success: true };
       }
       return { success: false, message: response.data.message };
@@ -173,8 +395,25 @@ export const ExamProvider = ({ children }) => {
     }
   };
 
+  const clearExamState = () => {
+    setCurrentSession(null);
+    setCurrentExam(null);
+    setQuestions([]);
+    setAnswers({});
+    setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+    localStorage.removeItem("exam_answers_backup");
+  };
+
   const updateTime = (newTime) => {
     setTimeLeft(newTime);
+
+    // Check if time has expired
+    const totalSeconds =
+      newTime.hours * 3600 + newTime.minutes * 60 + newTime.seconds;
+    if (totalSeconds <= 0 && !needsAutoSubmit && currentSession) {
+      setNeedsAutoSubmit(true);
+      handleAutoSubmit();
+    }
   };
 
   const value = {
@@ -184,11 +423,14 @@ export const ExamProvider = ({ children }) => {
     answers,
     timeLeft,
     isLoading,
+    needsAutoSubmit,
     startExam,
     saveAnswer,
+    saveAllAnswers,
     submitExam,
     cancelExam,
     updateTime,
+    handleAutoSubmit,
     loadActiveSession,
     hasActiveSession: !!currentSession,
   };

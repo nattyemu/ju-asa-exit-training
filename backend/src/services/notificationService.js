@@ -3,8 +3,8 @@ import { users, profiles, exams, studentExams } from "../db/schema.js";
 import { eq, and, gt, lte, isNull, count, or } from "drizzle-orm";
 import {
   sendExamReminder,
-  sendDeadlineWarning,
   sendSystemAnnouncement,
+  sendUnstartedExamReminder,
 } from "../utils/emailService.js";
 
 /**
@@ -191,17 +191,18 @@ export const sendExamReminders = async (examId = null) => {
   }
 };
 /**
- * Send deadline warnings for ongoing exams
+ * Send reminders to students who haven't started a specific exam
  */
-export const sendDeadlineWarnings = async () => {
+export const sendUnstartedExamReminders = async (examId) => {
   try {
-    // console.log("Starting deadline warnings...");
-
     const now = new Date();
-    const threeHoursFromNow = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
-    // Find active exams ending soon (in the next 3 hours)
-    const endingExams = await db
+    if (!examId) {
+      throw new Error("Exam ID is required");
+    }
+
+    // 1️⃣ Get active exam
+    const examResult = await db
       .select({
         id: exams.id,
         title: exams.title,
@@ -210,130 +211,205 @@ export const sendDeadlineWarnings = async () => {
       .from(exams)
       .where(
         and(
+          eq(exams.id, Number(examId)),
           eq(exams.isActive, true),
-          gt(exams.availableUntil, now), // Exam is still active
-          lte(exams.availableUntil, threeHoursFromNow) // Ends within the next 3 hours
+          lte(exams.availableFrom, now),
+          gt(exams.availableUntil, now)
+        )
+      )
+      .limit(1);
+
+    if (examResult.length === 0) {
+      return {
+        success: false,
+        message: "Exam not found or not active",
+      };
+    }
+
+    const exam = examResult[0];
+
+    // 2️⃣ Get ACTIVE students who have NOT started the exam
+    // ✅ EXACT SAME LOGIC AS STATS
+    const studentsToNotify = await db
+      .select({
+        userId: users.id,
+        email: users.email,
+      })
+      .from(users)
+      .leftJoin(
+        studentExams,
+        and(
+          eq(studentExams.studentId, users.id),
+          eq(studentExams.examId, exam.id)
+        )
+      )
+      .where(
+        and(
+          eq(users.role, "STUDENT"),
+          eq(users.isActive, true),
+          isNull(studentExams.id)
         )
       );
 
-    // console.log(`Found ${endingExams.length} exams ending soon`);
+    let sent = 0;
+    let failed = 0;
 
-    const results = [];
+    for (const student of studentsToNotify) {
+      try {
+        await sendUnstartedExamReminder(student.email, {
+          studentName: "Student", // safe fallback
+          examTitle: exam.title,
+          endTime: exam.availableUntil,
+        });
 
-    for (const exam of endingExams) {
-      // Find students who started but haven't submitted
-      const activeStudents = await db
-        .select({
-          studentId: studentExams.studentId,
-          email: users.email,
-          fullName: profiles.fullName,
-          startedAt: studentExams.startedAt,
-        })
-        .from(studentExams)
-        .innerJoin(users, eq(studentExams.studentId, users.id))
-        .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(
-          and(
-            eq(studentExams.examId, exam.id),
-            isNull(studentExams.submittedAt) // Haven't submitted yet
-          )
-        );
-
-      // console.log(
-      //   `Found ${activeStudents.length} active students for exam: ${exam.title}`
-      // );
-
-      for (const student of activeStudents) {
-        const timeLeft = Math.max(
-          0,
-          Math.floor((new Date(exam.availableUntil) - now) / (60 * 1000))
-        );
-
-        // Format time left for email
-        let timeLeftText;
-        if (timeLeft > 120) {
-          const hours = Math.floor(timeLeft / 60);
-          const minutes = timeLeft % 60;
-          timeLeftText = `${hours} hours${
-            minutes > 0 ? ` ${minutes} minutes` : ""
-          }`;
-        } else if (timeLeft > 60) {
-          const hours = Math.floor(timeLeft / 60);
-          const minutes = timeLeft % 60;
-          timeLeftText = `${hours} hour${hours > 1 ? "s" : ""}${
-            minutes > 0 ? ` ${minutes} minutes` : ""
-          }`;
-        } else {
-          timeLeftText = `${timeLeft} minutes`;
-        }
-
-        try {
-          const emailResult = await sendDeadlineWarning(student.email, {
-            studentName: student.fullName,
-            examTitle: exam.title,
-            endTime: exam.availableUntil,
-            timeLeft: timeLeftText,
-          });
-
-          results.push({
-            examId: exam.id,
-            examTitle: exam.title,
-            studentId: student.studentId,
-            studentName: student.fullName,
-            email: student.email,
-            type: "deadline_warning",
-            timeLeftMinutes: timeLeft,
-            timeLeftText: timeLeftText,
-            success: emailResult.success,
-            message: emailResult.message,
-            sentAt: new Date(),
-          });
-
-          // console.log(`Sent deadline warning to ${student.email}`);
-        } catch (emailError) {
-          console.error(
-            `Failed to send deadline warning to ${student.email}:`,
-            emailError
-          );
-          results.push({
-            examId: exam.id,
-            studentId: student.studentId,
-            email: student.email,
-            type: "deadline_warning",
-            success: false,
-            message: emailError.message,
-            sentAt: new Date(),
-          });
-        }
+        sent++;
+      } catch (err) {
+        failed++;
       }
     }
 
-    const successful = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success).length;
-
     return {
       success: true,
-      message: `Sent ${successful} deadline warnings successfully. ${failed} failed.`,
+      message: `Sent ${sent} reminders to students who haven't started "${exam.title}". ${failed} failed.`,
       data: {
-        totalWarningsSent: results.length,
-        successful: successful,
-        failed: failed,
-        urgent: results.filter((r) => r.timeLeftMinutes < 60).length,
-        warning: results.filter(
-          (r) => r.timeLeftMinutes >= 60 && r.timeLeftMinutes <= 180
-        ).length,
-        details: results,
+        examId: exam.id,
+        totalUnstartedStudents: studentsToNotify.length,
+        sent,
+        failed,
       },
     };
   } catch (error) {
-    console.error("Deadline warnings error:", error);
+    console.error("❌ sendUnstartedExamReminders error:", error);
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+};
+
+/**
+ * Get statistics for unstarted students in active exams
+ */
+export const getUnstartedExamStats = async () => {
+  try {
+    // console.log("=== GETTING UNSTARTED EXAM STATS ===");
+
+    const now = new Date();
+
+    // Get all active exams (currently available)
+    const activeExams = await db
+      .select({
+        id: exams.id,
+        title: exams.title,
+        availableUntil: exams.availableUntil,
+        isActive: exams.isActive,
+      })
+      .from(exams)
+      .where(
+        and(
+          eq(exams.isActive, true),
+          lte(exams.availableFrom, now), // Exam has started
+          gt(exams.availableUntil, now) // Exam hasn't ended yet
+        )
+      );
+
+    // console.log(`Found ${activeExams.length} active exams`);
+
+    // Get total active students count
+    const totalActiveStudentsResult = await db
+      .select({ count: count() })
+      .from(users)
+      .where(and(eq(users.role, "STUDENT"), eq(users.isActive, true)));
+
+    const totalActiveStudents = totalActiveStudentsResult[0]?.count || 0;
+    // console.log(`Total active students: ${totalActiveStudents}`);
+
+    // Get unstarted counts for each exam
+    const stats = [];
+
+    for (const exam of activeExams) {
+      // Get count of students who haven't started this exam
+      const unstartedStudentsResult = await db
+        .select({ count: count() })
+        .from(users)
+        .leftJoin(
+          studentExams,
+          and(
+            eq(studentExams.studentId, users.id),
+            eq(studentExams.examId, exam.id)
+          )
+        )
+        .where(
+          and(
+            eq(users.role, "STUDENT"),
+            eq(users.isActive, true),
+            isNull(studentExams.id) // Haven't started (no studentExams record)
+          )
+        );
+
+      const unstartedCount = unstartedStudentsResult[0]?.count || 0;
+
+      // Also get count of students who have started
+      const startedStudentsResult = await db
+        .select({ count: count() })
+        .from(studentExams)
+        .where(eq(studentExams.examId, exam.id));
+
+      const startedCount = startedStudentsResult[0]?.count || 0;
+
+      stats.push({
+        examId: exam.id,
+        examTitle: exam.title,
+        availableUntil: exam.availableUntil,
+        totalActiveStudents: totalActiveStudents,
+        unstartedStudents: unstartedCount,
+        startedStudents: startedCount,
+        completionRate:
+          totalActiveStudents > 0
+            ? Math.round((startedCount / totalActiveStudents) * 100)
+            : 0,
+      });
+
+      // console.log(`Exam "${exam.title}": ${unstartedCount} unstarted out of ${totalActiveStudents} students`);
+    }
+
+    return {
+      success: true,
+      data: {
+        totalActiveStudents,
+        activeExams: stats,
+        lastUpdated: new Date(),
+      },
+    };
+  } catch (error) {
+    console.error("❌ Get unstarted exam stats error:", error);
     return {
       success: false,
       error: error.message,
     };
   }
 };
+// Helper function to format time left
+const formatTimeLeft = (endTime, currentTime) => {
+  const timeLeft = Math.max(
+    0,
+    Math.floor((new Date(endTime) - currentTime) / (60 * 1000))
+  );
 
+  if (timeLeft > 120) {
+    const hours = Math.floor(timeLeft / 60);
+    const minutes = timeLeft % 60;
+    return `${hours} hours${minutes > 0 ? ` ${minutes} minutes` : ""}`;
+  } else if (timeLeft > 60) {
+    const hours = Math.floor(timeLeft / 60);
+    const minutes = timeLeft % 60;
+    return `${hours} hour${hours > 1 ? "s" : ""}${
+      minutes > 0 ? ` ${minutes} minutes` : ""
+    }`;
+  } else {
+    return `${timeLeft} minutes`;
+  }
+};
 /**
  * Send system announcement to all users
  */
@@ -434,7 +510,8 @@ export const getUserNotificationPreferences = async (userId) => {
 
 export default {
   sendExamReminders,
-  sendDeadlineWarnings,
+  sendUnstartedExamReminders,
   sendSystemAnnouncementToAll,
   getUserNotificationPreferences,
+  getUnstartedExamStats,
 };

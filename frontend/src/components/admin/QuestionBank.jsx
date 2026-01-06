@@ -230,7 +230,6 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
               {stats.stats.remainingSlots} slots remaining
             </div>
           </div>
-
           {/* Card 2: By Difficulty */}
           <div className="bg-white rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-3">
@@ -276,8 +275,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
               ))}
             </div>
           </div>
-
-          {/* Card 3: By Subject (Improved) */}
+          {/* Card 3: By Subject (Improved with Scroll) */}
           <div className="bg-white rounded-xl border border-border p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -290,15 +288,22 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
               </div>
             </div>
 
-            <div className="space-y-3">
-              {stats.stats.bySubject.slice(0, 3).map((subject, index) => {
+            {/* Scrollable container for subjects */}
+            <div
+              className="space-y-3 max-h-48 overflow-y-auto pr-2"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
+              {stats.stats.bySubject.map((subject, index) => {
                 const percentage = Math.round(
                   (subject.count / stats.stats.totalQuestions) * 100
                 );
                 return (
-                  <div key={index}>
+                  <div key={index} className="pr-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-text-primary truncate max-w-[100px]">
+                      <span className="text-sm text-text-primary truncate max-w-[120px]">
                         {subject.subject}
                       </span>
                       <span className="text-sm font-medium text-text-primary">
@@ -318,16 +323,8 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
                 );
               })}
 
-              {stats.stats.bySubject.length > 3 && (
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="text-xs text-text-secondary text-center">
-                    +{stats.stats.bySubject.length - 3} more subjects
-                  </div>
-                </div>
-              )}
-
               {stats.stats.bySubject.length === 0 && (
-                <div className="text-center py-2">
+                <div className="text-center py-4">
                   <p className="text-sm text-text-secondary italic">
                     No subjects yet
                   </p>
@@ -446,8 +443,6 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
               a.click();
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
-
-              toast.success("Questions exported successfully");
             }}
             className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-gray-50 transition-colors text-sm"
           >
