@@ -2,70 +2,57 @@ import React, { useState, useEffect, useRef } from "react";
 import { Clock } from "lucide-react";
 
 export const Timer = ({
-  initialTime,
+  initialTime, // Number of seconds remaining
   onTimeUp,
   isSubmitting,
   compact = false,
 }) => {
-  const [time, setTime] = useState(initialTime);
-  const hasCalledTimeUp = useRef(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(initialTime || 0);
+  const [hasExpired, setHasExpired] = useState(false);
   const timerRef = useRef(null);
 
-  // Reset when initialTime changes
+  // Update timer when initialTime changes
   useEffect(() => {
-    setTime(initialTime);
-    hasCalledTimeUp.current = false;
+    if (initialTime === undefined) return;
 
-    // Clear existing timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+    setRemainingSeconds(initialTime);
+    setHasExpired(initialTime <= 0);
+
+    if (initialTime <= 0 && onTimeUp) {
+      onTimeUp();
     }
   }, [initialTime]);
 
-  // Timer logic - SIMPLIFIED
+  // Start countdown
   useEffect(() => {
-    // Don't start timer if time is already 0 or submitting
-    if (time <= 0 || isSubmitting || hasCalledTimeUp.current) return;
+    if (initialTime === undefined || hasExpired || isSubmitting) return;
 
-    // Call onTimeUp 5 seconds BEFORE time expires
-    if (time <= 5 && onTimeUp && !hasCalledTimeUp.current) {
-      console.log("Timer: 5 seconds left, calling onTimeUp");
-      hasCalledTimeUp.current = true;
-      onTimeUp();
-      return;
-    }
-
-    // Start timer
     timerRef.current = setInterval(() => {
-      setTime((prev) => {
-        const newTime = prev - 1;
+      setRemainingSeconds((prev) => {
+        const newSeconds = prev - 1;
 
-        // Check if we should trigger onTimeUp (5 seconds before)
-        if (newTime <= 5 && onTimeUp && !hasCalledTimeUp.current) {
-          console.log("Timer: 5 seconds left, calling onTimeUp");
-          hasCalledTimeUp.current = true;
-          setTimeout(() => {
-            onTimeUp();
-          }, 100);
-        }
-
-        // If time reaches 0, clear interval
-        if (newTime <= 0) {
+        if (newSeconds <= 0) {
+          setHasExpired(true);
           clearInterval(timerRef.current);
+
+          // Call onTimeUp
+          if (onTimeUp) {
+            onTimeUp();
+          }
+
           return 0;
         }
 
-        return newTime;
+        return newSeconds;
       });
     }, 1000);
 
-    // Cleanup
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [time, isSubmitting, onTimeUp]);
+  }, [initialTime, hasExpired, isSubmitting, onTimeUp]);
 
   // Format time display
   const formatTime = (seconds) => {
@@ -87,9 +74,9 @@ export const Timer = ({
 
   // Color based on time remaining
   const getTimeColor = () => {
-    if (time > 600) return "text-green-600";
-    if (time > 300) return "text-yellow-600";
-    if (time > 60) return "text-orange-600";
+    if (remainingSeconds > 600) return "text-green-600";
+    if (remainingSeconds > 300) return "text-yellow-600";
+    if (remainingSeconds > 60) return "text-orange-600";
     return "text-red-600";
   };
 
@@ -101,7 +88,7 @@ export const Timer = ({
       <div className="flex items-center gap-1">
         <Clock className={`w-4 h-4 ${timeColor}`} />
         <span className={`font-mono font-bold ${timeColor}`}>
-          {formatTime(time)}
+          {formatTime(remainingSeconds)}
         </span>
       </div>
     );
@@ -113,31 +100,13 @@ export const Timer = ({
       <div className="flex items-center gap-2">
         <Clock className={`w-5 h-5 ${timeColor}`} />
         <div className={`font-mono text-lg font-bold ${timeColor}`}>
-          {formatTime(time)}
+          {formatTime(remainingSeconds)}
         </div>
       </div>
 
-      {time <= 60 && (
+      {remainingSeconds <= 60 && (
         <div className="text-xs font-medium text-red-600 animate-pulse">
           Time almost up!
-        </div>
-      )}
-
-      {/* Progress bar */}
-      {initialTime > 0 && (
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div
-            className={`h-full rounded-full transition-all duration-1000 ${
-              time > 600
-                ? "bg-green-500"
-                : time > 300
-                ? "bg-yellow-500"
-                : time > 60
-                ? "bg-orange-500"
-                : "bg-red-500"
-            }`}
-            style={{ width: `${(time / initialTime) * 100}%` }}
-          />
         </div>
       )}
     </div>

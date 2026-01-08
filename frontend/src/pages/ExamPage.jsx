@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useExam } from "../contexts/ExamContext";
 import { examService } from "../services/examService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { ConfirmationModal } from "../components/common/ConfirmationModal"; // NEW IMPORT
+import { ConfirmationModal } from "../components/common/ConfirmationModal";
 import { QuestionCard } from "../components/student/QuestionCard";
 import { QuestionNavigation } from "../components/student/QuestionNavigation";
 import { Timer } from "../components/student/Timer";
@@ -44,7 +44,7 @@ export const ExamPage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
-  const [showConfirmCancel, setShowConfirmCancel] = useState(false); // NEW STATE
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [markedQuestions, setMarkedQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
@@ -54,7 +54,6 @@ export const ExamPage = () => {
   const timeExpiredToastShown = useRef(false);
   const isSubmittingRef = useRef(false);
   const pendingOperationsRef = useRef([]);
-  // Track if we've already loaded to prevent infinite loops
   const hasLoadedRef = useRef(false);
   const saveAnswerDebounceRef = useRef(null);
   const mountedRef = useRef(false);
@@ -71,13 +70,11 @@ export const ExamPage = () => {
   useEffect(() => {
     timeExpiredToastShown.current = false;
     setShowFiveMinWarning(false);
-    hasLoadedRef.current = false; // Reset when examId changes
+    hasLoadedRef.current = false;
   }, [examId]);
 
   // Handle exam time up
-
   const handleExamTimeUp = useCallback(async () => {
-    // Prevent multiple calls
     if (
       timeExpiredToastShown.current ||
       isSubmittingRef.current ||
@@ -125,9 +122,74 @@ export const ExamPage = () => {
     }
   }, [currentSession, submitExam, saveAllAnswers, examId, navigate]);
 
-  // Main exam loading logic - FIXED DEPENDENCIES
+  // Function to refresh remaining time based on actual elapsed time
+  const refreshRemainingTime = useCallback(() => {
+    if (!currentSession?.startedAt || !currentExam?.duration || examExpired) {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const startedAt = new Date(currentSession.startedAt);
+      const examDurationMs = currentExam.duration * 60000;
+
+      // console.log("🕒 Time Calculation Debug:", {
+      //   now: now.toISOString(),
+      //   startedAt: startedAt.toISOString(),
+      //   durationMinutes: currentExam.duration,
+      //   durationMs: examDurationMs,
+      //   studentExamId: currentSession.id,
+      // });
+
+      const endTime = new Date(startedAt.getTime() + examDurationMs);
+      const remainingMs = endTime - now;
+
+      // console.log("📊 Remaining Time Debug:", {
+      //   endTime: endTime.toISOString(),
+      //   remainingMs,
+      //   remainingSeconds: Math.floor(remainingMs / 1000),
+      // });
+
+      const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+
+      const hours = Math.floor(remainingSeconds / 3600);
+      const minutes = Math.floor((remainingSeconds % 3600) / 60);
+      const seconds = remainingSeconds % 60;
+
+      // console.log("🎯 Final Time Values:", {
+      //   remainingSeconds,
+      //   hours,
+      //   minutes,
+      //   seconds,
+      //   timeLeft: { hours, minutes, seconds },
+      // });
+
+      updateTime({ hours, minutes, seconds });
+
+      // Check if time has expired
+      if (remainingMs <= 0) {
+        console.log("⏰ Time expired!");
+        setExamExpired(true);
+        if (!timeExpiredToastShown.current) {
+          handleExamTimeUp();
+        }
+      }
+
+      return remainingSeconds;
+    } catch (error) {
+      console.error("Error refreshing remaining time:", error);
+      return 0;
+    }
+  }, [
+    currentSession,
+    currentExam,
+    examExpired,
+    updateTime,
+    handleExamTimeUp,
+    timeExpiredToastShown,
+  ]);
+  // Main exam loading logic
   useEffect(() => {
-    // Only run once on mount
     if (mountedRef.current) {
       console.log("🔄 ExamPage: Re-render, skipping load");
       return;
@@ -156,6 +218,10 @@ export const ExamPage = () => {
             return;
           }
           console.log("✅ Session found");
+
+          // Refresh time on load
+          refreshRemainingTime();
+
           setIsLoading(false);
           return;
         }
@@ -163,6 +229,12 @@ export const ExamPage = () => {
         // Load session
         console.log("⚠️ Loading session...");
         await loadActiveSession();
+
+        // Refresh time after loading
+        if (currentSession) {
+          refreshRemainingTime();
+        }
+
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to load exam:", error);
@@ -173,40 +245,17 @@ export const ExamPage = () => {
 
     loadExam();
 
-    // Cleanup
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  // Timer effect - FIXED: Remove sessionChecked dependency to prevent loops
+  // Timer effect - FIXED: Refresh time when page becomes visible
   useEffect(() => {
-    if (remainingTimeInSeconds <= 0 || !currentSession || examExpired) return;
+    if (!currentSession || examExpired) return;
 
     const timerInterval = setInterval(() => {
       const newSeconds = remainingTimeInSeconds - 1;
-
-      // Show 5-minute warning
-      if (newSeconds === 300 && !showFiveMinWarning) {
-        setShowFiveMinWarning(true);
-        toast(
-          (t) => (
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
-              <div>
-                <p className="font-medium">⏰ Time Warning</p>
-                <p className="text-sm opacity-90">
-                  Only 5 minutes left! Submit soon.
-                </p>
-              </div>
-            </div>
-          ),
-          {
-            duration: 5000,
-            icon: "⚠️",
-          }
-        );
-      }
 
       if (newSeconds <= 0) {
         clearInterval(timerInterval);
@@ -227,8 +276,38 @@ export const ExamPage = () => {
     updateTime,
     examExpired,
     handleExamTimeUp,
-    showFiveMinWarning,
   ]);
+
+  // FIX: Refresh timer when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        currentSession &&
+        !examExpired
+      ) {
+        // console.log("🔄 Page became visible, refreshing timer...");
+        refreshRemainingTime();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Also refresh when window gets focus (additional safety)
+    const handleFocus = () => {
+      if (currentSession && !examExpired) {
+        // console.log("🔄 Window focused, refreshing timer...");
+        refreshRemainingTime();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [currentSession, examExpired, refreshRemainingTime]);
 
   // Save answers on page unload
   useEffect(() => {
@@ -331,7 +410,6 @@ export const ExamPage = () => {
     }
   };
 
-  // Update handleSubmitExam:
   const handleSubmitExam = async () => {
     if (
       !currentSession?.id ||
@@ -380,7 +458,6 @@ export const ExamPage = () => {
     }
   };
 
-  // UPDATED: handleCancelExam with modal
   const handleCancelExam = async () => {
     setShowConfirmCancel(true);
   };
