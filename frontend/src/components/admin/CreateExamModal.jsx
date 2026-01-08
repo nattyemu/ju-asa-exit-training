@@ -13,7 +13,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
     duration: 180, // 3 hours in minutes
     totalQuestions: 100,
     passingScore: 50,
-    isActive: true,
+    isActive: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -45,7 +45,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
     }
 
     if (formData.passingScore < 0 || formData.passingScore > 100) {
-      newErrors.passingScore = "Passing score must be between 0 and 100";
+      newErrors.passingScore = "Passing score must be between 0% and 100%";
     }
 
     const now = new Date();
@@ -284,7 +284,9 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
 
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  <div className="flex items-center gap-2">Passing Score *</div>
+                  <div className="flex items-center gap-2">
+                    Passing Score(%) *
+                  </div>
                 </label>
                 <input
                   type="number"
@@ -303,7 +305,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   step="1"
                 />
                 <p className="mt-1 text-xs text-text-secondary">
-                  passing score
+                  passing score(%)
                 </p>
                 {errors.passingScore && (
                   <p className="mt-1 text-sm text-red-600">

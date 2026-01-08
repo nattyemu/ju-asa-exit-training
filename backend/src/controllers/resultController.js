@@ -39,7 +39,7 @@ export const getStudentResult = async (req, res) => {
         exam: {
           id: exams.id,
           title: exams.title,
-          totalQuestions: exams.totalQuestions,
+          totalQuestions: exams.totalQuestions, // From exams table - source of truth
           passingScore: exams.passingScore,
           duration: exams.duration,
         },
@@ -98,11 +98,26 @@ export const getStudentResult = async (req, res) => {
     }
 
     // Calculate performance metrics
-    const totalQuestions = result.exam.totalQuestions;
-    const correctAnswers = result.result.correctAnswers;
-    const score = result.result.score;
-    const timeSpent = result.result.timeSpent;
+    const totalQuestions = result.exam.totalQuestions; // CORRECT: Use from exams table
+    const correctAnswers = result.result.correctAnswers; // From results table
+    const score = result.result.score; // From results table
+    const timeSpent = result.result.timeSpent; // From results table
     const examDuration = result.exam.duration;
+
+    // Count answered questions from detailedAnswers
+    const answeredQuestions = detailedAnswers.length;
+
+    // Calculate correct count from detailedAnswers for verification
+    const actualCorrectCount = detailedAnswers.filter(
+      (answer) => answer.isCorrect
+    ).length;
+
+    // Verify consistency - This is for debugging/logging
+    if (correctAnswers !== actualCorrectCount) {
+      console.warn(
+        `Result consistency warning: Result table has ${correctAnswers} correct, but detailed count is ${actualCorrectCount}`
+      );
+    }
 
     // Get exam average for comparison
     const [examStats] = await db
@@ -155,9 +170,14 @@ export const getStudentResult = async (req, res) => {
         subject,
         totalQuestions: stats.total,
         correctAnswers: stats.correct,
-        percentage: Math.round((stats.correct / stats.total) * 100),
+        percentage:
+          stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
       })
     );
+
+    // Calculate unanswered questions correctly
+    const unansweredQuestions = totalQuestions - answeredQuestions;
+    const incorrectAnswers = answeredQuestions - correctAnswers;
 
     return res.status(200).json({
       success: true,
@@ -172,13 +192,16 @@ export const getStudentResult = async (req, res) => {
         session: result.session,
         review: {
           totalQuestions,
-          answeredQuestions: detailedAnswers.length,
+          answeredQuestions,
           correctAnswers,
-          incorrectAnswers: totalQuestions - correctAnswers,
-          unansweredQuestions: totalQuestions - detailedAnswers.length,
+          incorrectAnswers,
+          unansweredQuestions,
           score: `${score}%`,
           timeSpent: `${timeSpent} minutes`,
-          timePercentage: `${Math.round((timeSpent / examDuration) * 100)}%`,
+          timePercentage:
+            examDuration > 0
+              ? `${Math.round((timeSpent / examDuration) * 100)}%`
+              : "N/A",
         },
         comparison: {
           examAverage: `${examStats.averageScore || 0}%`,
