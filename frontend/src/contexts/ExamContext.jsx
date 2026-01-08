@@ -136,36 +136,36 @@ export const ExamProvider = ({ children }) => {
     }
   };
   // Update the useEffect that loads on mount
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      console.log("🚀 ExamContext: User is student, loading session...");
-      loadActiveSession();
-    } else {
-      console.log("👤 ExamContext: User is not student, clearing session");
-      clearExamState();
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     console.log("🚀 ExamContext: User is student, loading session...");
+  //     loadActiveSession();
+  //   } else {
+  //     console.log("👤 ExamContext: User is not student, clearing session");
+  //     clearExamState();
+  //   }
+  // }, [user]);
 
   // Reset when user changes
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      hasLoadedSessionRef.current = false; // Reset for new user
-      loadActiveSession();
-    } else {
-      clearExamState();
-      hasLoadedSessionRef.current = false;
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     hasLoadedSessionRef.current = false; // Reset for new user
+  //     loadActiveSession();
+  //   } else {
+  //     clearExamState();
+  //     hasLoadedSessionRef.current = false;
+  //   }
+  // }, [user]);
   // Update the useEffect that loads on mount
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      console.log("🚀 ExamContext: User is student, loading session...");
-      loadActiveSession();
-    } else {
-      console.log("👤 ExamContext: User is not student, clearing session");
-      clearExamState();
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     console.log("🚀 ExamContext: User is student, loading session...");
+  //     loadActiveSession();
+  //   } else {
+  //     console.log("👤 ExamContext: User is not student, clearing session");
+  //     clearExamState();
+  //   }
+  // }, [user]);
 
   const startExam = async (examId) => {
     // This function should ONLY resume existing sessions

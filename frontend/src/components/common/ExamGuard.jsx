@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; // Changed from useParams
 import { useAuth } from "../../contexts/AuthContext";
 import { examService } from "../../services/examService";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -7,10 +7,13 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 
 export const ExamGuard = ({ children }) => {
-  const { examId } = useParams();
+  const location = useLocation(); // Added
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
+
+  // Get examId from location state
+  const examId = location.state?.examId;
 
   useEffect(() => {
     const checkExamStatus = async () => {
@@ -41,7 +44,9 @@ export const ExamGuard = ({ children }) => {
             if (resultResponse.data.success) {
               // Has results, redirect to results page
               toast.error("This exam has expired. Showing your results...");
-              navigate(`/results/${examId}`);
+              navigate(`/results`, {
+                state: { examId: examId, examData: exam },
+              });
             } else {
               // No results, exam is just unavailable
               toast.error("This exam is no longer available.");
@@ -96,7 +101,7 @@ export const ExamGuard = ({ children }) => {
     };
 
     checkExamStatus();
-  }, [examId, user, navigate]);
+  }, [examId, user, navigate]); // Changed dependency
 
   if (isChecking) {
     return (

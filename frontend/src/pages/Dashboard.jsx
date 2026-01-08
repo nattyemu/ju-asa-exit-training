@@ -126,7 +126,9 @@ export const Dashboard = () => {
           });
         } else {
           // Still valid, continue exam
-          navigate(`/exam/${exam.id}`);
+          navigate(`/exam`, {
+            state: { examId: exam.id, examData: exam },
+          });
         }
         return;
       }
@@ -138,8 +140,10 @@ export const Dashboard = () => {
 
       if (startResponse.data.success) {
         console.log("✅ Dashboard: Exam session started successfully");
-        // Navigate to exam page
-        navigate(`/exam/${exam.id}`);
+        // Navigate to exam page with state
+        navigate(`/exam`, {
+          state: { examId: exam.id, examData: exam },
+        });
       } else {
         console.error(
           "❌ Dashboard: Failed to start exam:",
@@ -149,11 +153,15 @@ export const Dashboard = () => {
         // Handle specific errors
         if (startResponse.data.message.includes("already completed")) {
           toast.error("You have already completed this exam");
-          navigate(`/results/${exam.id}`);
+          navigate(`/results`, {
+            state: { examId: exam.id, examData: exam },
+          });
         } else if (startResponse.data.message.includes("already exists")) {
           // Session already exists
           toast.info("Resuming existing session...");
-          navigate(`/exam/${exam.id}`);
+          navigate(`/exam`, {
+            state: { examId: exam.id, examData: exam },
+          });
         } else {
           toast.error(startResponse.data.message || "Failed to start exam");
         }
@@ -164,7 +172,9 @@ export const Dashboard = () => {
       // Handle 409 (Conflict) - session already exists
       if (error.response?.status === 409) {
         toast.info("Resuming existing session...");
-        navigate(`/exam/${exam.id}`);
+        navigate(`/exam`, {
+          state: { examId: exam.id, examData: exam },
+        });
         return;
       }
 
@@ -174,7 +184,9 @@ export const Dashboard = () => {
         error.response.data.message?.includes("already completed")
       ) {
         toast.error("You have already completed this exam");
-        navigate(`/results/${exam.id}`);
+        navigate(`/results`, {
+          state: { examId: exam.id, examData: exam },
+        });
         return;
       }
 
@@ -233,7 +245,7 @@ export const Dashboard = () => {
 
       // Don't show toast for 404 - it's normal when no exams
       if (error.response?.status !== 404) {
-        toast.error("Failed to load available exams");
+        // toast.error("Failed to load available exams");
       }
     } finally {
       setIsLoading(false);

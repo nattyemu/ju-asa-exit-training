@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useExam } from "../contexts/ExamContext";
 import { examService } from "../services/examService";
@@ -20,9 +20,11 @@ import {
 import toast from "react-hot-toast";
 
 export const ExamPage = () => {
-  const { examId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const examId = location.state?.examId;
+  const examDataFromState = location.state?.examData;
   const {
     currentExam,
     currentSession,
@@ -51,6 +53,7 @@ export const ExamPage = () => {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [examExpired, setExamExpired] = useState(false);
   const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
+  const [hasNoQuestions, setHasNoQuestions] = useState(false);
   const timeExpiredToastShown = useRef(false);
   const isSubmittingRef = useRef(false);
   const pendingOperationsRef = useRef([]);
@@ -71,7 +74,22 @@ export const ExamPage = () => {
     timeExpiredToastShown.current = false;
     setShowFiveMinWarning(false);
     hasLoadedRef.current = false;
+    setHasNoQuestions(false); // Reset this too
   }, [examId]);
+
+  // Check for empty questions and auto-cancel
+  useEffect(() => {
+    if (
+      questions &&
+      questions.length === 0 &&
+      currentSession?.id &&
+      !hasNoQuestions
+    ) {
+      console.log("No questions found, auto-cancelling session");
+      setHasNoQuestions(true);
+      cancelExam();
+    }
+  }, [questions, currentSession, cancelExam, hasNoQuestions]);
 
   // Handle exam time up
   const handleExamTimeUp = useCallback(async () => {
@@ -109,7 +127,10 @@ export const ExamPage = () => {
 
         // Wait a moment for state to clear
         setTimeout(() => {
-          navigate(`/results/${examId}`, { replace: true });
+          navigate(`/results`, {
+            replace: true,
+            state: { examId: examId, examData: currentExam },
+          });
         }, 1000);
       } else {
         toast.error("Failed to submit exam", { id: loadingToast });
@@ -120,7 +141,14 @@ export const ExamPage = () => {
     } finally {
       isSubmittingRef.current = false;
     }
-  }, [currentSession, submitExam, saveAllAnswers, examId, navigate]);
+  }, [
+    currentSession,
+    submitExam,
+    saveAllAnswers,
+    examId,
+    navigate,
+    currentExam,
+  ]);
 
   // Function to refresh remaining time based on actual elapsed time
   const refreshRemainingTime = useCallback(() => {
@@ -133,36 +161,14 @@ export const ExamPage = () => {
       const startedAt = new Date(currentSession.startedAt);
       const examDurationMs = currentExam.duration * 60000;
 
-      // console.log("🕒 Time Calculation Debug:", {
-      //   now: now.toISOString(),
-      //   startedAt: startedAt.toISOString(),
-      //   durationMinutes: currentExam.duration,
-      //   durationMs: examDurationMs,
-      //   studentExamId: currentSession.id,
-      // });
-
       const endTime = new Date(startedAt.getTime() + examDurationMs);
       const remainingMs = endTime - now;
-
-      // console.log("📊 Remaining Time Debug:", {
-      //   endTime: endTime.toISOString(),
-      //   remainingMs,
-      //   remainingSeconds: Math.floor(remainingMs / 1000),
-      // });
 
       const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
 
       const hours = Math.floor(remainingSeconds / 3600);
       const minutes = Math.floor((remainingSeconds % 3600) / 60);
       const seconds = remainingSeconds % 60;
-
-      // console.log("🎯 Final Time Values:", {
-      //   remainingSeconds,
-      //   hours,
-      //   minutes,
-      //   seconds,
-      //   timeLeft: { hours, minutes, seconds },
-      // });
 
       updateTime({ hours, minutes, seconds });
 
@@ -188,6 +194,7 @@ export const ExamPage = () => {
     handleExamTimeUp,
     timeExpiredToastShown,
   ]);
+
   // Main exam loading logic
   useEffect(() => {
     if (mountedRef.current) {
@@ -196,10 +203,12 @@ export const ExamPage = () => {
     }
 
     mountedRef.current = true;
-    console.log("📱 ExamPage: Mounted for exam", examId);
+    console.log("📱 ExamPage: Mounted with examId from state:", examId);
 
     const loadExam = async () => {
+      // Check if we have examId from state
       if (!examId || user?.role !== "STUDENT") {
+        console.log("❌ No examId in state, redirecting to dashboard");
         navigate("/dashboard");
         return;
       }
@@ -214,7 +223,7 @@ export const ExamPage = () => {
         if (currentSession) {
           if (currentSession.examId !== parseInt(examId)) {
             toast.error("Wrong exam session");
-            navigate(`/exam/${currentSession.examId}`);
+            navigate("/dashboard");
             return;
           }
           console.log("✅ Session found");
@@ -248,9 +257,9 @@ export const ExamPage = () => {
     return () => {
       mountedRef.current = false;
     };
-  }, []);
+  }, [examId, user, navigate]);
 
-  // Timer effect - FIXED: Refresh time when page becomes visible
+  // Timer effect
   useEffect(() => {
     if (!currentSession || examExpired) return;
 
@@ -278,7 +287,7 @@ export const ExamPage = () => {
     handleExamTimeUp,
   ]);
 
-  // FIX: Refresh timer when page becomes visible
+  // Refresh timer when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (
@@ -286,17 +295,14 @@ export const ExamPage = () => {
         currentSession &&
         !examExpired
       ) {
-        // console.log("🔄 Page became visible, refreshing timer...");
         refreshRemainingTime();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Also refresh when window gets focus (additional safety)
     const handleFocus = () => {
       if (currentSession && !examExpired) {
-        // console.log("🔄 Window focused, refreshing timer...");
         refreshRemainingTime();
       }
     };
@@ -313,7 +319,6 @@ export const ExamPage = () => {
   useEffect(() => {
     const handleBeforeUnload = async (e) => {
       if (currentSession?.id) {
-        // Try to save all answers before page closes
         await saveAllAnswers();
       }
     };
@@ -324,174 +329,45 @@ export const ExamPage = () => {
     };
   }, [currentSession, saveAllAnswers]);
 
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      // Cleanup on component unmount
       if (saveAnswerDebounceRef.current) {
         clearTimeout(saveAnswerDebounceRef.current);
       }
 
-      // Clear any pending operations
       if (isSubmittingRef.current) {
         console.log("Component unmounting while submitting...");
       }
     };
   }, []);
 
-  const handleAnswerSelect = async (chosenAnswer) => {
-    if (!currentSession?.id || !currentQuestion || examExpired) {
-      return;
-    }
+  // ====== EARLY RETURNS GO HERE (AFTER ALL HOOKS) ======
 
-    // Update local state immediately (NO API CALL)
-    const normalizedAnswer = chosenAnswer.toUpperCase();
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: normalizedAnswer,
-    }));
+  // Show "No Questions Available" page if needed
+  if (hasNoQuestions) {
+    return (
+      <div className="min-h-screen bg-background-light flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">
+            No Questions Available
+          </h2>
+          <p className="text-text-secondary mb-6">
+            This exam doesn't have any questions yet. Session cancelled.
+          </p>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-    // Queue for auto-save (delayed)
-    if (saveAnswerDebounceRef.current) {
-      clearTimeout(saveAnswerDebounceRef.current);
-    }
-
-    saveAnswerDebounceRef.current = setTimeout(async () => {
-      try {
-        const result = await saveAnswer(
-          currentQuestion.id,
-          normalizedAnswer,
-          true
-        );
-
-        if (!result.success && result.timeExpired) {
-          if (!timeExpiredToastShown.current) {
-            timeExpiredToastShown.current = true;
-            handleExamTimeUp();
-          }
-        }
-      } catch (error) {
-        console.error("Auto-save error:", error);
-      }
-    }, 2000); // Save after 2 seconds of inactivity
-  };
-
-  const handleNavigate = async (index) => {
-    if (index >= 0 && index < questions.length) {
-      // Clear any pending debounced save
-      if (saveAnswerDebounceRef.current) {
-        clearTimeout(saveAnswerDebounceRef.current);
-      }
-
-      // Save current answer immediately
-      if (currentQuestion && answers[currentQuestion.id]) {
-        await saveAnswer(
-          currentQuestion.id,
-          answers[currentQuestion.id],
-          false
-        );
-      }
-
-      setCurrentQuestionIndex(index);
-    }
-  };
-
-  const handleManualSave = async () => {
-    try {
-      toast.loading("Saving answers...", { id: "saving" });
-      const result = await saveAllAnswers();
-
-      if (result.success) {
-        toast.success(`Saved ${result.count || 0} answers`, { id: "saving" });
-      } else {
-        toast.error("Failed to save answers", { id: "saving" });
-      }
-    } catch (error) {
-      toast.error("Failed to save answers", { id: "saving" });
-    }
-  };
-
-  const handleSubmitExam = async () => {
-    if (
-      !currentSession?.id ||
-      isSubmittingRef.current ||
-      isNavigatingRef.current
-    ) {
-      return;
-    }
-
-    try {
-      isSubmittingRef.current = true;
-      isNavigatingRef.current = true;
-
-      const loadingToast = toast.loading("Submitting exam...");
-
-      // Clear any pending saves
-      if (saveAnswerDebounceRef.current) {
-        clearTimeout(saveAnswerDebounceRef.current);
-      }
-
-      const result = await submitExam();
-
-      if (result.success || result.redirect || result.alreadySubmitted) {
-        toast.success("Exam submitted successfully!", { id: loadingToast });
-
-        // Clear context state
-        if (cancelExam) {
-          await cancelExam();
-        }
-
-        // Navigate with replace to prevent going back
-        navigate(`/results/${examId}`, { replace: true });
-      } else {
-        toast.error(result.message || "Failed to submit exam", {
-          id: loadingToast,
-        });
-        isNavigatingRef.current = false;
-      }
-    } catch (error) {
-      console.error("Submit exam error:", error);
-      toast.error("Failed to submit exam. Please try again.");
-      isNavigatingRef.current = false;
-    } finally {
-      isSubmittingRef.current = false;
-      setShowConfirmSubmit(false);
-    }
-  };
-
-  const handleCancelExam = async () => {
-    setShowConfirmCancel(true);
-  };
-
-  const handleConfirmCancelExam = async () => {
-    if (!currentSession?.id || examContextLoading) return;
-
-    try {
-      const result = await cancelExam();
-      if (result.success) {
-        toast.success("Exam cancelled");
-        navigate("/dashboard");
-      } else {
-        toast.error(result.message || "Failed to cancel exam");
-        setShowConfirmCancel(false);
-      }
-    } catch (error) {
-      console.error("Cancel exam error:", error);
-      toast.error("Failed to cancel exam");
-      setShowConfirmCancel(false);
-    }
-  };
-
-  // Calculate progress
-  const answeredCount = Object.keys(answers || {}).length;
-  const totalQuestions = questions?.length || 0;
-  const progressPercentage =
-    totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
-
-  // Determine if time has expired
-  const isTimeExpired =
-    remainingTimeInSeconds <= 0 || needsAutoSubmit || examExpired;
-
-  // Loading state - check if we have session and questions
+  // Loading state
   if (isLoading || examContextLoading) {
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
@@ -561,7 +437,7 @@ export const ExamPage = () => {
     );
   }
 
-  // Check if we have questions
+  // Check if we have questions (normal check - not early return)
   if (!questions || questions.length === 0) {
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
@@ -583,6 +459,157 @@ export const ExamPage = () => {
       </div>
     );
   }
+
+  // ====== REST OF THE COMPONENT ======
+
+  const handleAnswerSelect = async (chosenAnswer) => {
+    if (!currentSession?.id || !currentQuestion || examExpired) {
+      return;
+    }
+
+    const normalizedAnswer = chosenAnswer.toUpperCase();
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: normalizedAnswer,
+    }));
+
+    if (saveAnswerDebounceRef.current) {
+      clearTimeout(saveAnswerDebounceRef.current);
+    }
+
+    saveAnswerDebounceRef.current = setTimeout(async () => {
+      try {
+        const result = await saveAnswer(
+          currentQuestion.id,
+          normalizedAnswer,
+          true
+        );
+
+        if (!result.success && result.timeExpired) {
+          if (!timeExpiredToastShown.current) {
+            timeExpiredToastShown.current = true;
+            handleExamTimeUp();
+          }
+        }
+      } catch (error) {
+        console.error("Auto-save error:", error);
+      }
+    }, 2000);
+  };
+
+  const handleNavigate = async (index) => {
+    if (index >= 0 && index < questions.length) {
+      if (saveAnswerDebounceRef.current) {
+        clearTimeout(saveAnswerDebounceRef.current);
+      }
+
+      if (currentQuestion && answers[currentQuestion.id]) {
+        await saveAnswer(
+          currentQuestion.id,
+          answers[currentQuestion.id],
+          false
+        );
+      }
+
+      setCurrentQuestionIndex(index);
+    }
+  };
+
+  const handleManualSave = async () => {
+    try {
+      toast.loading("Saving answers...", { id: "saving" });
+      const result = await saveAllAnswers();
+
+      if (result.success) {
+        toast.success(`Saved ${result.count || 0} answers`, { id: "saving" });
+      } else {
+        toast.error("Failed to save answers", { id: "saving" });
+      }
+    } catch (error) {
+      toast.error("Failed to save answers", { id: "saving" });
+    }
+  };
+
+  const handleSubmitExam = async () => {
+    if (
+      !currentSession?.id ||
+      isSubmittingRef.current ||
+      isNavigatingRef.current
+    ) {
+      return;
+    }
+
+    try {
+      isSubmittingRef.current = true;
+      isNavigatingRef.current = true;
+
+      const loadingToast = toast.loading("Submitting exam...");
+
+      if (saveAnswerDebounceRef.current) {
+        clearTimeout(saveAnswerDebounceRef.current);
+      }
+
+      const result = await submitExam();
+
+      if (result.success || result.redirect || result.alreadySubmitted) {
+        toast.success("Exam submitted successfully!", { id: loadingToast });
+
+        navigate(`/results`, {
+          replace: true,
+          state: {
+            examId: examId,
+            examData: currentExam,
+            resultData: result.data,
+          },
+        });
+      } else {
+        toast.error(result.message || "Failed to submit exam", {
+          id: loadingToast,
+        });
+        isNavigatingRef.current = false;
+      }
+    } catch (error) {
+      console.error("Submit exam error:", error);
+      toast.error("Failed to submit exam. Please try again.");
+      isNavigatingRef.current = false;
+    } finally {
+      isSubmittingRef.current = false;
+      setShowConfirmSubmit(false);
+    }
+  };
+
+  const handleCancelExam = async () => {
+    setShowConfirmCancel(true);
+  };
+
+  const handleConfirmCancelExam = async () => {
+    if (!currentSession?.id || examContextLoading) return;
+
+    try {
+      const result = await cancelExam();
+      if (result.success) {
+        toast.success("Exam cancelled");
+        navigate("/dashboard");
+      } else {
+        toast.error(result.message || "Failed to cancel exam");
+        setShowConfirmCancel(false);
+      }
+    } catch (error) {
+      console.error("Cancel exam error:", error);
+      toast.error("Failed to cancel exam");
+      setShowConfirmCancel(false);
+    }
+  };
+
+  // Calculate progress
+  const answeredCount = Object.keys(answers || {}).length;
+  const totalQuestions = questions?.length || 0;
+  const progressPercentage =
+    totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+
+  // Determine if time has expired
+  const isTimeExpired =
+    remainingTimeInSeconds <= 0 || needsAutoSubmit || examExpired;
 
   return (
     <div className="min-h-screen bg-background-light">
@@ -616,7 +643,7 @@ export const ExamPage = () => {
                 <div className="hidden md:flex items-center gap-2">
                   <Clock className="w-5 h-5 text-text-secondary" />
                   <Timer
-                    initialTime={Math.max(0, remainingTimeInSeconds - 5)} // Subtract 5 seconds
+                    initialTime={Math.max(0, remainingTimeInSeconds - 5)}
                     onTimeUp={handleExamTimeUp}
                     isSubmitting={examContextLoading}
                   />
@@ -639,7 +666,7 @@ export const ExamPage = () => {
                 </div>
               </div>
 
-              {/* Submit Button - disable if time expired */}
+              {/* Submit Button */}
               <button
                 onClick={() => setShowConfirmSubmit(true)}
                 disabled={examContextLoading || isTimeExpired}

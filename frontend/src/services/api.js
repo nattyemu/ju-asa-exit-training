@@ -3,7 +3,8 @@ import toast from "react-hot-toast";
 
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
-
+let lastNetworkErrorTime = 0;
+const NETWORK_ERROR_DEBOUNCE_MS = 3000;
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   headers: {
@@ -38,7 +39,19 @@ api.interceptors.response.use(
   (error) => {
     // Handle network errors
     if (!error.response) {
-      toast.error("Network error. Please check your connection.");
+      const now = Date.now();
+      const config = error.config || {};
+
+      // Check if we should show toast
+      const shouldShowToast =
+        !config.suppressNetworkErrorToast &&
+        now - lastNetworkErrorTime > NETWORK_ERROR_DEBOUNCE_MS;
+
+      if (shouldShowToast) {
+        toast.error("Network error. Please check your connection.");
+        lastNetworkErrorTime = now;
+      }
+
       return Promise.reject(error);
     }
 

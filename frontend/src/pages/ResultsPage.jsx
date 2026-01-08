@@ -105,7 +105,7 @@ export const ResultsPage = () => {
           toast.error("Exam results not found");
         }
       } else {
-        toast.error("Failed to load exam results");
+        // toast.error("Failed to load exam results");
       }
     }
   };

@@ -87,7 +87,7 @@ function AppContent() {
 
         {/* Student only routes */}
         <Route
-          path="/exam/:examId"
+          path="/exam"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <ExamGuard>
