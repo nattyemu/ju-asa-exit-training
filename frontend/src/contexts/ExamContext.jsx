@@ -85,13 +85,19 @@ export const ExamProvider = ({ children }) => {
           needsAutoSubmit,
         } = response.data.data;
 
+        console.log("✅ ExamContext: Session found:", {
+          sessionId: session?.id,
+          examId: exam?.id,
+          questionCount: questions?.length,
+          needsAutoSubmit,
+        });
+
         // If session needs auto-submit, DO NOT load it
         if (needsAutoSubmit) {
-          console.log("⚠️ ExamContext: Session needs auto-submit, skipping");
-          return;
+          console.log("⚠️ ExamContext: Session needs auto-submit, clearing");
+          clearExamState();
+          return false;
         }
-
-        console.log("✅ ExamContext: Session loaded:", session.id);
 
         setCurrentSession(session);
         setCurrentExam(exam);
@@ -118,17 +124,17 @@ export const ExamProvider = ({ children }) => {
 
         return true; // Successfully loaded
       } else {
-        console.log("📭 ExamContext: No active session found");
+        console.log("📭 ExamContext: No active session found in response");
         return false; // No session
       }
     } catch (error) {
-      console.log("📭 ExamContext: No active session or error:", error.message);
+      console.log("❌ ExamContext: Error loading session:", error.message);
       return false; // Error or no session
     } finally {
       setIsLoading(false);
+      console.log("🏁 ExamContext: loadActiveSession completed");
     }
   };
-
   // Update the useEffect that loads on mount
   useEffect(() => {
     if (user?.role === "STUDENT") {

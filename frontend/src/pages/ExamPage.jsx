@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useExam } from "../contexts/ExamContext";
 import { examService } from "../services/examService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { ConfirmationModal } from "../components/common/ConfirmationModal"; // NEW IMPORT
 import { QuestionCard } from "../components/student/QuestionCard";
 import { QuestionNavigation } from "../components/student/QuestionNavigation";
 import { Timer } from "../components/student/Timer";
@@ -43,6 +44,7 @@ export const ExamPage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false); // NEW STATE
   const [markedQuestions, setMarkedQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
@@ -73,7 +75,9 @@ export const ExamPage = () => {
   }, [examId]);
 
   // Handle exam time up
+
   const handleExamTimeUp = useCallback(async () => {
+    // Prevent multiple calls
     if (
       timeExpiredToastShown.current ||
       isSubmittingRef.current ||
@@ -82,53 +86,44 @@ export const ExamPage = () => {
       return;
     }
 
+    timeExpiredToastShown.current = true;
+    isSubmittingRef.current = true;
+
     try {
-      timeExpiredToastShown.current = true;
-      isSubmittingRef.current = true;
+      console.log("🔄 ExamPage: Time up - Starting auto-submit");
 
       // Clear any pending saves
       if (saveAnswerDebounceRef.current) {
         clearTimeout(saveAnswerDebounceRef.current);
+        saveAnswerDebounceRef.current = null;
       }
 
-      // Show only ONE toast
-      const loadingToast = toast.loading("Exam time expired. Submitting...");
+      // Show single toast
+      const loadingToast = toast.loading("Time's up! Submitting exam...");
 
-      // Save all answers first
+      // Save any unsaved answers
       await saveAllAnswers();
 
-      // Submit exam with auto-submit flag
-      const result = await submitExam(true); // Pass true for auto-submit
+      // Submit with auto-submit flag
+      const result = await submitExam(true);
 
-      if (result.success || result.redirect) {
-        toast.success("Exam submitted successfully", { id: loadingToast });
+      if (result.success || result.redirect || result.alreadySubmitted) {
+        toast.success("Exam submitted successfully!", { id: loadingToast });
 
-        // CLEAR ALL STATES BEFORE NAVIGATION
-        if (cancelExam) {
-          await cancelExam(); // This clears the context state
-        }
-
-        // Add a small delay for state to clear
+        // Wait a moment for state to clear
         setTimeout(() => {
           navigate(`/results/${examId}`, { replace: true });
-        }, 500);
+        }, 1000);
       } else {
-        toast.error(result.message || "Failed to submit", { id: loadingToast });
+        toast.error("Failed to submit exam", { id: loadingToast });
       }
     } catch (error) {
-      console.error("Time up handler error:", error);
+      console.error("❌ Auto-submit error:", error);
       toast.error("Failed to auto-submit exam");
     } finally {
       isSubmittingRef.current = false;
     }
-  }, [
-    currentSession,
-    submitExam,
-    cancelExam,
-    saveAllAnswers,
-    examId,
-    navigate,
-  ]);
+  }, [currentSession, submitExam, saveAllAnswers, examId, navigate]);
 
   // Main exam loading logic - FIXED DEPENDENCIES
   useEffect(() => {
@@ -249,6 +244,7 @@ export const ExamPage = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [currentSession, saveAllAnswers]);
+
   useEffect(() => {
     return () => {
       // Cleanup on component unmount
@@ -262,6 +258,7 @@ export const ExamPage = () => {
       }
     };
   }, []);
+
   const handleAnswerSelect = async (chosenAnswer) => {
     if (!currentSession?.id || !currentQuestion || examExpired) {
       return;
@@ -382,26 +379,28 @@ export const ExamPage = () => {
       setShowConfirmSubmit(false);
     }
   };
+
+  // UPDATED: handleCancelExam with modal
   const handleCancelExam = async () => {
+    setShowConfirmCancel(true);
+  };
+
+  const handleConfirmCancelExam = async () => {
     if (!currentSession?.id || examContextLoading) return;
 
-    if (
-      window.confirm(
-        "Are you sure you want to cancel this exam? All progress will be lost."
-      )
-    ) {
-      try {
-        const result = await cancelExam();
-        if (result.success) {
-          toast.success("Exam cancelled");
-          navigate("/dashboard");
-        } else {
-          toast.error(result.message || "Failed to cancel exam");
-        }
-      } catch (error) {
-        console.error("Cancel exam error:", error);
-        toast.error("Failed to cancel exam");
+    try {
+      const result = await cancelExam();
+      if (result.success) {
+        toast.success("Exam cancelled");
+        navigate("/dashboard");
+      } else {
+        toast.error(result.message || "Failed to cancel exam");
+        setShowConfirmCancel(false);
       }
+    } catch (error) {
+      console.error("Cancel exam error:", error);
+      toast.error("Failed to cancel exam");
+      setShowConfirmCancel(false);
     }
   };
 
@@ -416,7 +415,7 @@ export const ExamPage = () => {
     remainingTimeInSeconds <= 0 || needsAutoSubmit || examExpired;
 
   // Loading state - check if we have session and questions
-  if (isLoading || examContextLoading || (!currentSession && !examExpired)) {
+  if (isLoading || examContextLoading) {
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
         <div className="text-center">
@@ -426,9 +425,15 @@ export const ExamPage = () => {
           </p>
           {currentSession && (
             <p className="text-xs text-gray-500 mt-2">
-              Session: {currentSession.id}
+              Session ID: {currentSession.id}
             </p>
           )}
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -534,7 +539,7 @@ export const ExamPage = () => {
                 <div className="hidden md:flex items-center gap-2">
                   <Clock className="w-5 h-5 text-text-secondary" />
                   <Timer
-                    initialTime={remainingTimeInSeconds}
+                    initialTime={Math.max(0, remainingTimeInSeconds - 5)} // Subtract 5 seconds
                     onTimeUp={handleExamTimeUp}
                     isSubmitting={examContextLoading}
                   />
@@ -603,7 +608,7 @@ export const ExamPage = () => {
                       initialTime={remainingTimeInSeconds}
                       onTimeUp={handleExamTimeUp}
                       isSubmitting={examContextLoading}
-                      compact
+                      compact={true}
                     />
                   </div>
 
@@ -819,65 +824,59 @@ export const ExamPage = () => {
         </div>
       </main>
 
-      {/* Confirm Submit Modal */}
-      {showConfirmSubmit && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-text-primary mb-4">
-              Submit Exam
-            </h3>
-
-            <div className="mb-6">
-              <p className="text-text-secondary mb-3">
-                Are you sure you want to submit your exam?
-              </p>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-yellow-800">Important:</p>
-                    <ul className="text-sm text-yellow-700 mt-1 space-y-1">
-                      <li>
-                        • You have answered {answeredCount} out of{" "}
-                        {totalQuestions} questions
-                      </li>
-                      <li>• Once submitted, you cannot change your answers</li>
-                      <li>• Your results will be available immediately</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirmSubmit(false)}
-                className="flex-1 py-3 border border-text-secondary text-text-secondary rounded-lg hover:bg-gray-50 transition-colors"
-                disabled={examContextLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitExam}
-                disabled={examContextLoading || isTimeExpired}
-                className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {examContextLoading ? (
-                  <>
-                    <LoadingSpinner size="sm" color="white" />
-                    Submitting...
-                  </>
-                ) : isTimeExpired ? (
-                  "Time Expired"
-                ) : (
-                  "Submit Exam"
-                )}
-              </button>
-            </div>
-          </div>
+      {/* Submit Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmSubmit}
+        onClose={() => setShowConfirmSubmit(false)}
+        onConfirm={handleSubmitExam}
+        title="Submit Exam"
+        message="Are you sure you want to submit your exam?"
+        confirmText={examContextLoading ? "Submitting..." : "Submit Exam"}
+        type="warning"
+        isLoading={examContextLoading}
+        confirmButtonDisabled={examContextLoading || isTimeExpired}
+      >
+        <div className="space-y-2">
+          <p className="font-medium text-yellow-800">Important:</p>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            <li>
+              • You have answered {answeredCount} out of {totalQuestions}{" "}
+              questions
+            </li>
+            <li>• Once submitted, you cannot change your answers</li>
+            <li>• Your results will be available immediately</li>
+            {isTimeExpired && (
+              <li className="text-red-600 font-medium">
+                • Exam time has expired
+              </li>
+            )}
+          </ul>
         </div>
-      )}
+      </ConfirmationModal>
+
+      {/* Cancel Exam Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmCancel}
+        onClose={() => setShowConfirmCancel(false)}
+        onConfirm={handleConfirmCancelExam}
+        title="Cancel Exam"
+        message="Are you sure you want to cancel this exam?"
+        confirmText="Yes, Cancel Exam"
+        cancelText="No, Continue Exam"
+        type="danger"
+        isLoading={examContextLoading}
+        confirmButtonDisabled={examContextLoading}
+      >
+        <div className="space-y-2">
+          <p className="font-medium text-red-800">Warning:</p>
+          <ul className="text-sm text-red-700 space-y-1">
+            <li>• All your progress will be permanently lost</li>
+            <li>• Your answers will not be saved</li>
+            <li>• You will need to restart the exam from the beginning</li>
+            <li>• This action cannot be undone</li>
+          </ul>
+        </div>
+      </ConfirmationModal>
     </div>
   );
 };

@@ -10,40 +10,56 @@ export const Timer = ({
   const [time, setTime] = useState(initialTime);
   const hasCalledTimeUp = useRef(false);
   const timerRef = useRef(null);
-  const lastCheckRef = useRef(Date.now());
 
+  // Reset when initialTime changes
   useEffect(() => {
     setTime(initialTime);
     hasCalledTimeUp.current = false;
 
-    // Clear any existing timer
+    // Clear existing timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
   }, [initialTime]);
 
+  // Timer logic - SIMPLIFIED
   useEffect(() => {
+    // Don't start timer if time is already 0 or submitting
     if (time <= 0 || isSubmitting || hasCalledTimeUp.current) return;
 
+    // Call onTimeUp 5 seconds BEFORE time expires
+    if (time <= 5 && onTimeUp && !hasCalledTimeUp.current) {
+      console.log("Timer: 5 seconds left, calling onTimeUp");
+      hasCalledTimeUp.current = true;
+      onTimeUp();
+      return;
+    }
+
+    // Start timer
     timerRef.current = setInterval(() => {
       setTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
+        const newTime = prev - 1;
 
-          // Add a small debounce to prevent multiple calls
-          if (onTimeUp && !hasCalledTimeUp.current) {
-            hasCalledTimeUp.current = true;
-            setTimeout(() => {
-              console.log("Timer: Calling onTimeUp");
-              onTimeUp();
-            }, 100); // Small delay
-          }
+        // Check if we should trigger onTimeUp (5 seconds before)
+        if (newTime <= 5 && onTimeUp && !hasCalledTimeUp.current) {
+          console.log("Timer: 5 seconds left, calling onTimeUp");
+          hasCalledTimeUp.current = true;
+          setTimeout(() => {
+            onTimeUp();
+          }, 100);
+        }
+
+        // If time reaches 0, clear interval
+        if (newTime <= 0) {
+          clearInterval(timerRef.current);
           return 0;
         }
-        return prev - 1;
+
+        return newTime;
       });
     }, 1000);
 
+    // Cleanup
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -51,6 +67,7 @@ export const Timer = ({
     };
   }, [time, isSubmitting, onTimeUp]);
 
+  // Format time display
   const formatTime = (seconds) => {
     if (seconds < 0) return "00:00";
 
@@ -68,23 +85,17 @@ export const Timer = ({
       .padStart(2, "0")}`;
   };
 
+  // Color based on time remaining
   const getTimeColor = () => {
-    if (time > 600) return "text-green-600"; // More than 10 minutes
-    if (time > 300) return "text-yellow-600"; // 5-10 minutes
-    if (time > 60) return "text-orange-600"; // 1-5 minutes
-    return "text-red-600"; // Less than 1 minute
+    if (time > 600) return "text-green-600";
+    if (time > 300) return "text-yellow-600";
+    if (time > 60) return "text-orange-600";
+    return "text-red-600";
   };
 
-  const getTimeWarning = () => {
-    if (time > 600) return null;
-    if (time > 300) return "Time is running out!";
-    if (time > 60) return "Hurry up!";
-    return "Time almost up!";
-  };
-
-  const warning = getTimeWarning();
   const timeColor = getTimeColor();
 
+  // Compact view
   if (compact) {
     return (
       <div className="flex items-center gap-1">
@@ -96,6 +107,7 @@ export const Timer = ({
     );
   }
 
+  // Full view
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
@@ -105,9 +117,9 @@ export const Timer = ({
         </div>
       </div>
 
-      {warning && (
+      {time <= 60 && (
         <div className="text-xs font-medium text-red-600 animate-pulse">
-          {warning}
+          Time almost up!
         </div>
       )}
 
