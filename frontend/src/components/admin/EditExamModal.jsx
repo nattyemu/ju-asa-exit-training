@@ -64,7 +64,7 @@ export const EditExamModal = ({ exam, onClose, onSubmit }) => {
     }
 
     if (formData.passingScore < 0 || formData.passingScore > 100) {
-      newErrors.passingScore = "Passing score must be between 0 and 100";
+      newErrors.passingScore = "Passing score must be between 0% and 100%";
     }
 
     if (formData.availableUntil <= formData.availableFrom) {
@@ -297,7 +297,9 @@ export const EditExamModal = ({ exam, onClose, onSubmit }) => {
 
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  <div className="flex items-center gap-2">Passing Score *</div>
+                  <div className="flex items-center gap-2">
+                    Passing Score(%) *
+                  </div>
                 </label>
                 <input
                   type="number"
@@ -316,7 +318,7 @@ export const EditExamModal = ({ exam, onClose, onSubmit }) => {
                   step="1"
                 />
                 <p className="mt-1 text-xs text-text-secondary">
-                  passing score
+                  passing score(&)
                 </p>
                 {errors.passingScore && (
                   <p className="mt-1 text-sm text-red-600">

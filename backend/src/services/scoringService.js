@@ -1,5 +1,5 @@
 import { db } from "../db/connection.js";
-import { answers, questions } from "../db/schema.js";
+import { answers, questions, studentExams, exams } from "../db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
 
 /**
@@ -9,6 +9,21 @@ import { eq, and, inArray } from "drizzle-orm";
  */
 export const calculateScore = async (studentExamId) => {
   try {
+    // First, get the exam's total questions
+    const [examData] = await db
+      .select({
+        totalQuestions: exams.totalQuestions,
+      })
+      .from(studentExams)
+      .innerJoin(exams, eq(studentExams.examId, exams.id))
+      .where(eq(studentExams.id, studentExamId));
+
+    if (!examData) {
+      throw new Error("Exam session not found");
+    }
+
+    const examTotalQuestions = examData.totalQuestions;
+
     // Get all answers for this exam session
     const studentAnswers = await db
       .select({
@@ -20,7 +35,7 @@ export const calculateScore = async (studentExamId) => {
 
     if (studentAnswers.length === 0) {
       return {
-        totalQuestions: 0,
+        totalQuestions: examTotalQuestions, // Use exam's total questions, not 0
         correctAnswers: 0,
         score: 0,
         answers: [],
@@ -65,12 +80,13 @@ export const calculateScore = async (studentExamId) => {
       });
     });
 
-    const totalQuestions = studentAnswers.length;
+    // Use exam's total questions, NOT studentAnswers.length
+    const totalQuestions = examTotalQuestions;
     const score =
       totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
 
     return {
-      totalQuestions,
+      totalQuestions, // This now matches exams.totalQuestions
       correctAnswers: correctCount,
       score: parseFloat(score.toFixed(2)),
       answers: detailedResults,

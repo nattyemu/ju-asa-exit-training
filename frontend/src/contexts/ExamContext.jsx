@@ -334,7 +334,7 @@ export const ExamProvider = ({ children }) => {
     }
 
     try {
-      setIsSubmitting(true); // Set submitting flag
+      setIsSubmitting(true);
 
       // Save any remaining answers first
       await saveAllAnswers();
@@ -345,13 +345,27 @@ export const ExamProvider = ({ children }) => {
       );
 
       if (response.data.success) {
+        // IMPORTANT: Clear state BEFORE returning
         clearExamState();
+
         return {
           success: true,
           data: response.data.data,
           isAutoSubmit,
         };
       }
+
+      // Handle specific cases
+      if (response.data.message?.includes("already submitted")) {
+        clearExamState();
+        return {
+          success: true,
+          message: "Exam already submitted",
+          redirect: true,
+          alreadySubmitted: true,
+        };
+      }
+
       return { success: false, message: response.data.message };
     } catch (error) {
       console.error("Submit exam error:", error);
@@ -360,14 +374,16 @@ export const ExamProvider = ({ children }) => {
         if (error.response.data.message?.includes("already submitted")) {
           clearExamState();
           return {
-            success: false,
+            success: true,
             message: "Exam already submitted",
             redirect: true,
+            alreadySubmitted: true,
           };
         }
 
         if (error.response.data.timeExpired && !isAutoSubmit) {
-          return await handleAutoSubmit();
+          // Try auto-submit
+          return await submitExam(true);
         }
       }
 
@@ -411,12 +427,12 @@ export const ExamProvider = ({ children }) => {
   const updateTime = (newTime) => {
     setTimeLeft(newTime);
 
-    // Check if time has expired
+    // Only check for time expiration, DON'T trigger auto-submit here
     const totalSeconds =
       newTime.hours * 3600 + newTime.minutes * 60 + newTime.seconds;
     if (totalSeconds <= 0 && !needsAutoSubmit && currentSession) {
       setNeedsAutoSubmit(true);
-      handleAutoSubmit();
+      // Remove the handleAutoSubmit() call here - let ExamPage handle it
     }
   };
 
