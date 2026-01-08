@@ -38,7 +38,7 @@ export const Dashboard = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isStartingExam, setIsStartingExam] = useState(false);
+  const [startingExamId, setStartingExamId] = useState(null);
   useEffect(() => {
     if (user?.role === "STUDENT") {
       loadExams();
@@ -91,12 +91,12 @@ export const Dashboard = () => {
   };
 
   const handleStartExam = async (exam) => {
-    if (isStartingExam) {
+    if (startingExamId) {
       toast.info("Please wait, starting exam...");
       return;
     }
 
-    setIsStartingExam(true);
+    setStartingExamId(exam.id);
 
     try {
       // Handle completed exams
@@ -192,7 +192,7 @@ export const Dashboard = () => {
 
       toast.error("Failed to start exam. Please try again.");
     } finally {
-      setIsStartingExam(false);
+      setStartingExamId(null);
     }
   };
   const loadExams = async () => {
@@ -766,7 +766,7 @@ export const Dashboard = () => {
                         key={exam.id}
                         exam={exam}
                         onStart={handleStartExam}
-                        isStarting={isStartingExam}
+                        isStarting={startingExamId === exam.id}
                       />
                     ))}
                   </div>
