@@ -302,7 +302,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   }`}
                   min="0"
                   max="100"
-                  step="1"
+                  step="0.01"
                 />
                 <p className="mt-1 text-xs text-text-secondary">
                   passing score(%)

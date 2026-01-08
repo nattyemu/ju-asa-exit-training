@@ -2,45 +2,48 @@ import React, { useState, useEffect, useRef } from "react";
 import { Clock } from "lucide-react";
 
 export const Timer = ({
-  initialTime,
+  initialTime, // Number of seconds remaining
   onTimeUp,
   isSubmitting,
   compact = false,
 }) => {
-  const [time, setTime] = useState(initialTime);
-  const hasCalledTimeUp = useRef(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(initialTime || 0);
+  const [hasExpired, setHasExpired] = useState(false);
   const timerRef = useRef(null);
-  const lastCheckRef = useRef(Date.now());
 
+  // Update timer when initialTime changes
   useEffect(() => {
-    setTime(initialTime);
-    hasCalledTimeUp.current = false;
+    if (initialTime === undefined) return;
 
-    // Clear any existing timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+    setRemainingSeconds(initialTime);
+    setHasExpired(initialTime <= 0);
+
+    if (initialTime <= 0 && onTimeUp) {
+      onTimeUp();
     }
   }, [initialTime]);
 
+  // Start countdown
   useEffect(() => {
-    if (time <= 0 || isSubmitting || hasCalledTimeUp.current) return;
+    if (initialTime === undefined || hasExpired || isSubmitting) return;
 
     timerRef.current = setInterval(() => {
-      setTime((prev) => {
-        if (prev <= 1) {
+      setRemainingSeconds((prev) => {
+        const newSeconds = prev - 1;
+
+        if (newSeconds <= 0) {
+          setHasExpired(true);
           clearInterval(timerRef.current);
 
-          // Add a small debounce to prevent multiple calls
-          if (onTimeUp && !hasCalledTimeUp.current) {
-            hasCalledTimeUp.current = true;
-            setTimeout(() => {
-              console.log("Timer: Calling onTimeUp");
-              onTimeUp();
-            }, 100); // Small delay
+          // Call onTimeUp
+          if (onTimeUp) {
+            onTimeUp();
           }
+
           return 0;
         }
-        return prev - 1;
+
+        return newSeconds;
       });
     }, 1000);
 
@@ -49,8 +52,9 @@ export const Timer = ({
         clearInterval(timerRef.current);
       }
     };
-  }, [time, isSubmitting, onTimeUp]);
+  }, [initialTime, hasExpired, isSubmitting, onTimeUp]);
 
+  // Format time display
   const formatTime = (seconds) => {
     if (seconds < 0) return "00:00";
 
@@ -68,64 +72,41 @@ export const Timer = ({
       .padStart(2, "0")}`;
   };
 
+  // Color based on time remaining
   const getTimeColor = () => {
-    if (time > 600) return "text-green-600"; // More than 10 minutes
-    if (time > 300) return "text-yellow-600"; // 5-10 minutes
-    if (time > 60) return "text-orange-600"; // 1-5 minutes
-    return "text-red-600"; // Less than 1 minute
+    if (remainingSeconds > 600) return "text-green-600";
+    if (remainingSeconds > 300) return "text-yellow-600";
+    if (remainingSeconds > 60) return "text-orange-600";
+    return "text-red-600";
   };
 
-  const getTimeWarning = () => {
-    if (time > 600) return null;
-    if (time > 300) return "Time is running out!";
-    if (time > 60) return "Hurry up!";
-    return "Time almost up!";
-  };
-
-  const warning = getTimeWarning();
   const timeColor = getTimeColor();
 
+  // Compact view
   if (compact) {
     return (
       <div className="flex items-center gap-1">
         <Clock className={`w-4 h-4 ${timeColor}`} />
         <span className={`font-mono font-bold ${timeColor}`}>
-          {formatTime(time)}
+          {formatTime(remainingSeconds)}
         </span>
       </div>
     );
   }
 
+  // Full view
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         <Clock className={`w-5 h-5 ${timeColor}`} />
         <div className={`font-mono text-lg font-bold ${timeColor}`}>
-          {formatTime(time)}
+          {formatTime(remainingSeconds)}
         </div>
       </div>
 
-      {warning && (
+      {remainingSeconds <= 60 && (
         <div className="text-xs font-medium text-red-600 animate-pulse">
-          {warning}
-        </div>
-      )}
-
-      {/* Progress bar */}
-      {initialTime > 0 && (
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div
-            className={`h-full rounded-full transition-all duration-1000 ${
-              time > 600
-                ? "bg-green-500"
-                : time > 300
-                ? "bg-yellow-500"
-                : time > 60
-                ? "bg-orange-500"
-                : "bg-red-500"
-            }`}
-            style={{ width: `${(time / initialTime) * 100}%` }}
-          />
+          Time almost up!
         </div>
       )}
     </div>
