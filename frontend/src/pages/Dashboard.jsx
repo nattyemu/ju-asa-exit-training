@@ -187,8 +187,46 @@ export const Dashboard = () => {
     try {
       setIsLoading(true);
       const response = await examService.getAvailableExams();
+      console.log("📋 Exam response:", response.data); // ADD THIS LINE
+
       if (response.data.success) {
-        setExams(response.data.data.exams || []);
+        // Get exams from response
+        const examsData = response.data.data.exams || [];
+
+        // DEBUG: Check exam dates
+        examsData.forEach((exam, index) => {
+          console.log(`Exam ${index + 1}:`, {
+            id: exam.id,
+            title: exam.title,
+            createdAt: exam.createdAt,
+            availableFrom: exam.availableFrom,
+            availableUntil: exam.availableUntil,
+          });
+        });
+
+        // Sort exams by createdAt in descending order (newest first)
+        const sortedExams = examsData.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          console.log(
+            `Sorting: ${a.id} (${dateA}) vs ${b.id} (${dateB}) = ${
+              dateB - dateA
+            }`
+          ); // ADD THIS
+          return dateB - dateA; // Newest first (descending)
+        });
+
+        // DEBUG: Check sorted order
+        console.log(
+          "📊 Sorted exams:",
+          sortedExams.map((e) => ({
+            id: e.id,
+            title: e.title,
+            createdAt: e.createdAt,
+          }))
+        );
+
+        setExams(sortedExams);
       }
     } catch (error) {
       console.error("Failed to load exams:", error);
