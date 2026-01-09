@@ -449,23 +449,12 @@ export const ExamPage = () => {
 
   // Check if we have questions (normal check - not early return)
   if (!questions || questions.length === 0) {
+    // Navigate immediately
+    navigate("/dashboard", { replace: true });
+    // Show loading while navigating
     return (
       <div className="min-h-screen bg-background-light flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-text-primary mb-2">
-            No Questions Available
-          </h2>
-          <p className="text-text-secondary mb-6">
-            This exam doesn't have any questions yet.
-          </p>
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-          >
-            Return to Dashboard
-          </button>
-        </div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
