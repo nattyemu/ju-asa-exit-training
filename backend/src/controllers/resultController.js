@@ -638,7 +638,7 @@ export const getDetailedResult = async (req, res) => {
         unansweredQuestions: stats.total - stats.answered,
         percentage:
           stats.answered > 0
-            ? Math.round((stats.correct / stats.answered) * 100)
+            ? Math.round((stats.correct / stats.total) * 100)
             : 0,
       })
     );
