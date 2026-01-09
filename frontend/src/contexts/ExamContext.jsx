@@ -272,7 +272,7 @@ export const ExamProvider = ({ children }) => {
     }
   };
 
-  const saveAllAnswers = async () => {
+  const saveAllAnswers = async (isAutoSubmit = false) => {
     if (!currentSession || !questions.length)
       return { success: false, message: "No active session or questions" };
 
@@ -290,7 +290,8 @@ export const ExamProvider = ({ children }) => {
 
       const response = await examService.saveAnswersBatch(
         currentSession.id,
-        answersArray
+        answersArray,
+        isAutoSubmit
       );
 
       // Clear localStorage backup after successful save
@@ -343,7 +344,7 @@ export const ExamProvider = ({ children }) => {
       setIsSubmitting(true);
 
       // Save any remaining answers first
-      await saveAllAnswers();
+      await saveAllAnswers(isAutoSubmit);
 
       const response = await examService.submitExam(
         currentSession.id,

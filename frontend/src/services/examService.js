@@ -95,13 +95,16 @@ export const examService = {
   saveAnswer: (sessionId, questionId, chosenAnswer, isAutosave = false) =>
     api.post(`/exam-session/${sessionId}/answers`, {
       questionId,
-      chosenAnswer, // ← Changed from "answer" to "chosenAnswer"
+      chosenAnswer,
       isAutosave,
     }),
 
   // Save multiple answers
-  saveAnswersBatch: (sessionId, answers) =>
-    api.post(`/exam-session/${sessionId}/answers/batch`, { answers }),
+  saveAnswersBatch: (sessionId, answers, isAutoSubmit = false) =>
+    api.post(`/exam-session/${sessionId}/answers/batch`, {
+      answers,
+      isAutoSubmit,
+    }),
 
   // Get session status
   getSessionStatus: (sessionId) => api.get(`/exam-session/${sessionId}/status`),

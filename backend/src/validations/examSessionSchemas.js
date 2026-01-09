@@ -45,6 +45,7 @@ export const saveMultipleAnswersSchema = z.object({
     )
     .min(1, "At least one answer is required")
     .max(100, "Cannot save more than 100 answers at once"),
+  isAutoSubmit: z.boolean().default(false).optional(),
 });
 
 // Submit exam schema (for future use)

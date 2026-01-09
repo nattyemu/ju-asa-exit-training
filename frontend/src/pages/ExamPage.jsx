@@ -118,7 +118,7 @@ export const ExamPage = () => {
       const loadingToast = toast.loading("Time's up! Submitting exam...");
 
       // Save any unsaved answers
-      await saveAllAnswers();
+      await saveAllAnswers(true);
 
       // Submit with auto-submit flag
       const result = await submitExam(true);
@@ -652,7 +652,7 @@ export const ExamPage = () => {
                 <div className="hidden md:flex items-center gap-2">
                   <Clock className="w-5 h-5 text-text-secondary" />
                   <Timer
-                    initialTime={Math.max(0, remainingTimeInSeconds - 5)}
+                    initialTime={Math.max(0, remainingTimeInSeconds)}
                     onTimeUp={handleExamTimeUp}
                     isSubmitting={examContextLoading}
                   />

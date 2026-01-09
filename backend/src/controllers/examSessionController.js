@@ -717,7 +717,8 @@ export const saveMultipleAnswers = async (req, res) => {
       });
     }
 
-    const { answers: answersData } = validationResult.data;
+    const { answers: answersData, isAutoSubmit = false } =
+      validationResult.data;
     const sessionId = parseInt(req.params.sessionId);
     const userId = req.user.userId;
 
@@ -768,7 +769,7 @@ export const saveMultipleAnswers = async (req, res) => {
     const startedAt = new Date(session.startedAt);
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
 
-    if (now > durationEnd) {
+    if (now > durationEnd && !isAutoSubmit) {
       return res.status(400).json({
         success: false,
         message:
