@@ -1112,6 +1112,21 @@ export const cancelSession = async (req, res) => {
       });
     }
 
+    // NEW: Check if exam has been active for more than 15 minutes
+    const startedAt = new Date(session.startedAt);
+    const now = new Date();
+    const minutesElapsed = Math.floor((now - startedAt) / (1000 * 60));
+
+    if (minutesElapsed > 15) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot cancel exam after 15 minutes of starting. Please submit or let it auto-submit.",
+        minutesElapsed,
+        maxAllowed: 15,
+      });
+    }
+
     // Use transaction to ensure data consistency
     await db.transaction(async (tx) => {
       // Delete all answers for this session

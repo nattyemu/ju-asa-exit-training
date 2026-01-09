@@ -51,6 +51,7 @@ export const ExamPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [canCancelExam, setCanCancelExam] = useState(true);
   const [examExpired, setExamExpired] = useState(false);
   const [showFiveMinWarning, setShowFiveMinWarning] = useState(false);
   const [hasNoQuestions, setHasNoQuestions] = useState(false);
@@ -258,7 +259,16 @@ export const ExamPage = () => {
       mountedRef.current = false;
     };
   }, [examId, user, navigate]);
+  useEffect(() => {
+    if (currentSession?.startedAt) {
+      const startedAt = new Date(currentSession.startedAt);
+      const now = new Date();
+      const minutesElapsed = Math.floor((now - startedAt) / (1000 * 60));
 
+      // Disable cancel after 15 minutes
+      setCanCancelExam(minutesElapsed <= 15);
+    }
+  }, [currentSession]);
   // Timer effect
   useEffect(() => {
     if (!currentSession || examExpired) return;
@@ -591,7 +601,6 @@ export const ExamPage = () => {
         toast.success("Exam cancelled");
         navigate("/dashboard");
       } else {
-        toast.error(result.message || "Failed to cancel exam");
         setShowConfirmCancel(false);
       }
     } catch (error) {
@@ -783,10 +792,17 @@ export const ExamPage = () => {
                 <button
                   onClick={handleCancelExam}
                   className="w-full py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
-                  disabled={examContextLoading || isTimeExpired}
+                  disabled={
+                    examContextLoading || isTimeExpired || !canCancelExam
+                  }
+                  title={
+                    !canCancelExam
+                      ? "Cannot cancel after 15 minutes of starting"
+                      : ""
+                  }
                 >
                   <LogOut className="w-4 h-4" />
-                  Cancel Exam
+                  {canCancelExam ? "Cancel Exam" : "Cancel Disabled"}
                 </button>
 
                 <div className="text-xs text-text-secondary mt-4">
@@ -949,11 +965,6 @@ export const ExamPage = () => {
             </li>
             <li>• Once submitted, you cannot change your answers</li>
             <li>• Your results will be available immediately</li>
-            {isTimeExpired && (
-              <li className="text-red-600 font-medium">
-                • Exam time has expired
-              </li>
-            )}
           </ul>
         </div>
       </ConfirmationModal>
@@ -969,7 +980,7 @@ export const ExamPage = () => {
         cancelText="No, Continue Exam"
         type="danger"
         isLoading={examContextLoading}
-        confirmButtonDisabled={examContextLoading}
+        confirmButtonDisabled={examContextLoading || !canCancelExam}
       >
         <div className="space-y-2">
           <p className="font-medium text-red-800">Warning:</p>
@@ -978,6 +989,11 @@ export const ExamPage = () => {
             <li>• Your answers will not be saved</li>
             <li>• You will need to restart the exam from the beginning</li>
             <li>• This action cannot be undone</li>
+            {canCancelExam && (
+              <li className="text-red-600 font-medium">
+                • Cancellation is only allowed within 15 minutes of starting
+              </li>
+            )}
           </ul>
         </div>
       </ConfirmationModal>
