@@ -99,6 +99,69 @@ export const Dashboard = () => {
     setStartingExamId(exam.id);
 
     try {
+      // FIRST: Check if student has any active session (for any exam)
+      try {
+        const activeSessionResponse = await examService.getActiveSession();
+
+        if (
+          activeSessionResponse.data.success &&
+          activeSessionResponse.data.data
+        ) {
+          const activeSession = activeSessionResponse.data.data.session;
+
+          // Check if active session is for THIS exam
+          if (activeSession.examId === exam.id) {
+            // Same exam - handle accordingly
+            if (exam.status === "COMPLETED") {
+              navigate(`/results`, {
+                state: {
+                  examData: exam,
+                  resultData: exam.result,
+                },
+              });
+              return;
+            }
+
+            if (exam.status === "IN_PROGRESS") {
+              const now = new Date();
+              const availableUntil = new Date(exam.availableUntil);
+
+              if (now > availableUntil) {
+                toast.info("This exam has expired. Showing results...");
+                navigate(`/results`, {
+                  state: {
+                    examData: exam,
+                    resultData: exam.result,
+                  },
+                });
+              } else {
+                navigate(`/exam`, {
+                  state: { examId: exam.id, examData: exam },
+                });
+              }
+              return;
+            }
+          } else {
+            // DIFFERENT exam - block and show message
+            toast.error(
+              `You have an active session for another exam. Please complete or cancel it first.`,
+              { duration: 3000 }
+            );
+
+            // Optionally: Navigate to the active exam
+            // navigate(`/exam`, {
+            //   state: { examId: activeSession.examId },
+            // });
+
+            setStartingExamId(null);
+            return;
+          }
+        }
+      } catch (error) {
+        // No active session or error - continue
+        console.log("No active session found, continuing...");
+      }
+
       // Handle completed exams
       if (exam.status === "COMPLETED") {
         navigate(`/results`, {
@@ -112,7 +175,6 @@ export const Dashboard = () => {
 
       // Handle in-progress exams
       if (exam.status === "IN_PROGRESS") {
-        // Check if exam is expired
         const now = new Date();
         const availableUntil = new Date(exam.availableUntil);
 
@@ -125,7 +187,6 @@ export const Dashboard = () => {
             },
           });
         } else {
-          // Still valid, continue exam
           navigate(`/exam`, {
             state: { examId: exam.id, examData: exam },
           });
@@ -133,14 +194,13 @@ export const Dashboard = () => {
         return;
       }
 
-      // NEW EXAM - Start new session
+      // NEW EXAM - Start new session (only if no active sessions)
       console.log("🚀 Dashboard: Starting NEW exam session for exam", exam.id);
 
       const startResponse = await examService.startExam(exam.id);
 
       if (startResponse.data.success) {
         console.log("✅ Dashboard: Exam session started successfully");
-        // Navigate to exam page with state
         navigate(`/exam`, {
           state: { examId: exam.id, examData: exam },
         });

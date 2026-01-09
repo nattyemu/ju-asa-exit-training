@@ -168,35 +168,33 @@ export const ExamProvider = ({ children }) => {
   // }, [user]);
 
   const startExam = async (examId) => {
-    // This function should ONLY resume existing sessions
-    // Dashboard should create new sessions
-
     try {
-      console.log("🔄 ExamContext: Loading existing session for exam:", examId);
+      console.log("🔄 ExamContext: Checking for active sessions...");
 
-      // Try to get active session
-      const response = await examService.getActiveSession();
+      // First, check if there's any active session
+      const sessionResponse = await examService.getActiveSession();
 
-      if (response.data.success && response.data.data) {
-        const { session, exam } = response.data.data;
+      if (sessionResponse.data.success && sessionResponse.data.data) {
+        const { session } = sessionResponse.data.data;
 
-        // Verify it's the right exam
-        if (session.examId !== examId) {
+        // Check if active session is for the requested exam
+        if (session.examId === parseInt(examId)) {
+          // Same exam - load it
+          await loadActiveSession();
+          return {
+            success: true,
+            message: "Loaded existing session",
+            isResumed: true,
+          };
+        } else {
+          // Different exam - block
           return {
             success: false,
-            message: `You have an active session for a different exam. Please complete it first.`,
+            message: `You have an active session for another exam (ID: ${session.examId}). Please complete it first.`,
             wrongExam: true,
             activeExamId: session.examId,
           };
         }
-
-        // Load the existing session data
-        await loadActiveSession();
-        return {
-          success: true,
-          message: "Loaded existing session",
-          isResumed: true,
-        };
       }
 
       // No active session found

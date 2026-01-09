@@ -36,6 +36,38 @@ export const startExamSession = async (req, res) => {
     const { examId } = validationResult.data;
     const userId = req.user.userId;
 
+    const examData = await db.select().from(exams).where(eq(exams.id, examId));
+    const examName = examData[0]?.title;
+
+    // FIRST: Check if student has ANY active session (for any exam)
+    const anyActiveSession = await db
+      .select()
+      .from(studentExams)
+      .where(
+        and(
+          eq(studentExams.studentId, userId),
+          isNull(studentExams.submittedAt)
+        )
+      )
+      .limit(1);
+
+    if (anyActiveSession.length > 0) {
+      const activeSession = anyActiveSession[0];
+
+      // Check if it's for the same exam
+      if (activeSession.examId === examId) {
+        // Same exam - will be handled below in transaction
+        console.log("Active session found for same exam");
+      } else {
+        // Different exam - block creation
+        return res.status(400).json({
+          success: false,
+          message: `You have an active session for another exam (Name: ${examName}). Please complete or cancel it first.`,
+          hasActiveSession: true,
+          activeExamId: activeSession.examId,
+        });
+      }
+    }
     // Check if exam exists and is active
     const [exam] = await db
       .select()
