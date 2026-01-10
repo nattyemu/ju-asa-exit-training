@@ -21,7 +21,7 @@ export const examService = {
     } catch (error) {
       // If detailed endpoint not found (404), try basic endpoint
       if (error.response?.status === 404) {
-        console.log("Detailed results not found, trying basic endpoint");
+        // console.log("Detailed results not found, trying basic endpoint");
 
         // Try basic result endpoint
         try {

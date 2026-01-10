@@ -71,7 +71,7 @@ export const getExamAnalytics = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get exam analytics error:", error);
+    // console.error("Get exam analytics error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve exam analytics",
@@ -112,7 +112,7 @@ export const getExamScoreDistribution = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get score distribution error:", error);
+    // console.error("Get score distribution error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve score distribution",
@@ -150,7 +150,7 @@ export const getExamQuestionAnalysis = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get question analysis error:", error);
+    // console.error("Get question analysis error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve question analysis",
@@ -188,7 +188,7 @@ export const getExamDepartmentPerformance = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get department performance error:", error);
+    // console.error("Get department performance error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve department performance",
@@ -226,7 +226,7 @@ export const getExamTimeAnalytics = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get time analytics error:", error);
+    // console.error("Get time analytics error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve time analytics",
@@ -264,7 +264,7 @@ export const getExamDifficultyAnalysis = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get difficulty analysis error:", error);
+    // console.error("Get difficulty analysis error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve difficulty analysis",
@@ -305,7 +305,7 @@ export const getAdminDashboardController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Admin dashboard controller error:", error);
+    // console.error("Admin dashboard controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve admin dashboard",
@@ -347,7 +347,7 @@ export const getStudentProgressController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Student progress controller error:", error);
+    // console.error("Student progress controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve student progress",
@@ -407,7 +407,7 @@ export const exportExamResultsController = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Export results controller error:", error);
+    // console.error("Export results controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to export exam results",
@@ -466,7 +466,7 @@ export const exportQuestionAnalyticsController = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Export question analytics controller error:", error);
+    // console.error("Export question analytics controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to export question analytics",
@@ -523,7 +523,7 @@ export const exportDepartmentPerformanceController = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Export department performance controller error:", error);
+    // console.error("Export department performance controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to export department performance",
@@ -584,7 +584,7 @@ export const exportCompleteReportController = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Export complete report controller error:", error);
+    // console.error("Export complete report controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to export complete report",

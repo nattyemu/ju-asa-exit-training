@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
           setUser(currentUser);
         }
       } catch (error) {
-        console.error("Error initializing auth:", error);
+        // console.error("Error initializing auth:", error);
       } finally {
         setLoading(false);
       }
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, message: result.message || "Login failed" };
     } catch (error) {
-      console.error("AuthContext.login error:", error);
+      // console.error("AuthContext.login error:", error);
       return {
         success: false,
         message:
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
       authService.logout();
       setUser(null);
     } catch (error) {
-      console.error("Error during logout:", error);
+      // console.error("Error during logout:", error);
     }
   }, []);
 
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
 
       return updatedUser;
     } catch (error) {
-      console.error("Error updating user profile:", error);
+      // console.error("Error updating user profile:", error);
       throw error;
     }
   };

@@ -122,7 +122,7 @@ export const checkAchievements = async (studentId) => {
       },
     };
   } catch (error) {
-    console.error("Achievements check error:", error);
+    // console.error("Achievements check error:", error);
     return {
       success: false,
       error: error.message,
@@ -173,7 +173,7 @@ export const getTopAchievers = async (limit = 5) => {
       },
     };
   } catch (error) {
-    console.error("Top achievers error:", error);
+    // console.error("Top achievers error:", error);
     return {
       success: false,
       error: error.message,

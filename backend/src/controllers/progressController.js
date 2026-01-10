@@ -33,7 +33,7 @@ export const getEnhancedProgressController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Enhanced progress controller error:", error);
+    // console.error("Enhanced progress controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve student progress",
@@ -63,7 +63,7 @@ export const getMyProgressController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("My progress controller error:", error);
+    // console.error("My progress controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve your progress",
@@ -92,7 +92,7 @@ export const getLeaderboardController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Leaderboard controller error:", error);
+    // console.error("Leaderboard controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve leaderboard",
@@ -120,7 +120,7 @@ export const getStudyTimeAnalyticsController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Study time analytics controller error:", error);
+    // console.error("Study time analytics controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve study time analytics",
@@ -148,7 +148,7 @@ export const getStudentAchievementsController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Student achievements controller error:", error);
+    // console.error("Student achievements controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve achievements",
@@ -176,7 +176,7 @@ export const getMyAchievementsController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("My achievements controller error:", error);
+    // console.error("My achievements controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve your achievements",
@@ -204,7 +204,7 @@ export const getTopAchieversController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Top achievers controller error:", error);
+    // console.error("Top achievers controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve top achievers",

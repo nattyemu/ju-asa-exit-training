@@ -31,7 +31,7 @@ export const EditQuestionModal = ({ question, examId, onClose, onSuccess }) => {
 
       onClose();
     } catch (error) {
-      console.error("Failed to update question:", error);
+      // console.error("Failed to update question:", error);
       toast.error("Failed to update question");
     } finally {
       setIsSubmitting(false);

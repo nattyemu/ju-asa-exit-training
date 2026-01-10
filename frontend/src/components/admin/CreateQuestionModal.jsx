@@ -21,7 +21,7 @@ export const CreateQuestionModal = ({ examId, onClose, onSuccess }) => {
 
       onClose();
     } catch (error) {
-      console.error("Failed to create question:", error);
+      // console.error("Failed to create question:", error);
       toast.error("Failed to create question");
     } finally {
       setIsSubmitting(false);

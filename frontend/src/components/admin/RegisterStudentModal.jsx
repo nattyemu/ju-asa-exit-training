@@ -117,7 +117,7 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
             return;
           }
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+          // console.error("Failed to upload image:", uploadError);
           toast.error("Failed to upload image. Please try again.");
           return;
         } finally {
@@ -139,7 +139,7 @@ export const RegisterStudentModal = ({ onClose, onSubmit }) => {
 
       await onSubmit(registrationData);
     } catch (error) {
-      console.error("Registration failed:", error);
+      // console.error("Registration failed:", error);
       if (error.response?.data?.message?.includes("already registered")) {
         setErrors({ email: "Email already registered" });
       }

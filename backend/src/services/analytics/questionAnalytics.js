@@ -158,7 +158,7 @@ export const getQuestionAnalysis = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("Question analysis error:", error);
+    // console.error("Question analysis error:", error);
     return {
       success: false,
       error: error.message,
@@ -206,7 +206,7 @@ export const getDifficultyAnalysis = async (examId) => {
       })),
     };
   } catch (error) {
-    console.error("Difficulty analysis error:", error);
+    // console.error("Difficulty analysis error:", error);
     return {
       success: false,
       error: error.message,

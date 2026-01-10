@@ -13,11 +13,12 @@ import {
   ChevronUp,
   User,
   Clock,
+  ChevronLeft,
 } from "lucide-react";
 import { adminService } from "../../services/adminService";
 import { examService } from "../../services/examService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import ScoreDistributionChart from "./analytics/ScoreDistributionChart";
 import DifficultyChart from "./analytics/DifficultyChart";
 import SubjectPerformanceChart from "./analytics/SubjectPerformanceChart";
@@ -79,7 +80,7 @@ export const AnalyticsDashboard = () => {
         setExams(response.data.data.exams || []);
       }
     } catch (error) {
-      console.error("Failed to load exams:", error);
+      // console.error("Failed to load exams:", error);
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,7 @@ export const AnalyticsDashboard = () => {
         });
       }
     } catch (error) {
-      console.error(`Failed to load rankings for exam ${examId}:`, error);
+      // console.error(`Failed to load rankings for exam ${examId}:`, error);
       // Still try to get title from exams list
       const selectedExamDetails = exams.find((e) => e.id === examId);
       setExamRankings({
@@ -183,7 +184,7 @@ export const AnalyticsDashboard = () => {
           : [],
       });
     } catch (error) {
-      console.error("Failed to load analytics data:", error);
+      // console.error("Failed to load analytics data:", error);
     } finally {
       setLoading(false);
     }
@@ -332,7 +333,7 @@ export const AnalyticsDashboard = () => {
       setShowExportModal(false);
       setShowInfoModal(true);
     } catch (error) {
-      console.error("Export failed:", error);
+      // console.error("Export failed:", error);
       setInfoModalTitle("Export Failed");
       setInfoModalMessage(error.message || "Export failed. Please try again.");
       setShowInfoModal(true);
@@ -425,13 +426,24 @@ export const AnalyticsDashboard = () => {
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary">
-            Analytics Dashboard
-          </h2>
-          <p className="text-sm text-text-secondary">
-            Performance insights and statistics
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="font-medium hidden sm:inline">Back</span>
+          </Link>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-text-primary">
+                Analytics Dashboard
+              </h2>
+            </div>
+            <p className="text-sm text-text-secondary mt-1">
+              Performance insights and statistics
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -450,16 +462,16 @@ export const AnalyticsDashboard = () => {
             </select>
           </div>
           {/* <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-gray-50 transition-colors text-sm"
-          >
-            {showAdvanced ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-            {showAdvanced ? "Basic View" : "Advanced View"}
-          </button> */}
+      onClick={() => setShowAdvanced(!showAdvanced)}
+      className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-gray-50 transition-colors text-sm"
+    >
+      {showAdvanced ? (
+        <EyeOff className="w-4 h-4" />
+      ) : (
+        <Eye className="w-4 h-4" />
+      )}
+      {showAdvanced ? "Basic View" : "Advanced View"}
+    </button> */}
           <button
             onClick={handleExportClick}
             className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

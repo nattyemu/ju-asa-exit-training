@@ -12,17 +12,19 @@ import {
   Search,
   Filter,
   Key,
+  ChevronLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { adminService } from "../../services/adminService";
-import { authService } from "../../services/authService"; // ADD THIS IMPORT
+import { authService } from "../../services/authService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { RegisterStudentModal } from "./RegisterStudentModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import { ImageModal } from "../common/ImageModal";
 import { EditUserModal } from "./EditUserModal";
-import { PasswordVerificationModal } from "./PasswordVerificationModal"; // ADD THIS IMPORT
+import { PasswordVerificationModal } from "./PasswordVerificationModal";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 export const UserManager = () => {
   const [users, setUsers] = useState([]);
@@ -30,10 +32,10 @@ export const UserManager = () => {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false); // NEW
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [passwordAction, setPasswordAction] = useState(null); // NEW: "make-admin" or "make-student"
+  const [passwordAction, setPasswordAction] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [pagination, setPagination] = useState({
@@ -75,7 +77,7 @@ export const UserManager = () => {
         throw new Error("Invalid response format");
       }
     } catch (error) {
-      console.error("Failed to load users:", error);
+      // console.error("Failed to load users:", error);
       toast.error(error.response?.data?.message || "Failed to load users");
       setUsers([]);
       setPagination({
@@ -96,7 +98,7 @@ export const UserManager = () => {
       loadUsers();
       setShowRegisterModal(false);
     } catch (error) {
-      console.error("Failed to register student:", error);
+      // console.error("Failed to register student:", error);
       toast.error(
         error.response?.data?.message || "Failed to register student"
       );
@@ -114,7 +116,7 @@ export const UserManager = () => {
       setShowChangePasswordModal(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error("Failed to change password:", error);
+      // console.error("Failed to change password:", error);
       toast.error(error.response?.data?.message || "Failed to change password");
     }
   };
@@ -150,7 +152,7 @@ export const UserManager = () => {
       setSelectedUser(null);
       setPasswordAction(null);
     } catch (error) {
-      console.error("Failed to update role:", error);
+      // console.error("Failed to update role:", error);
 
       throw error; // Re-throw to let modal handle error
     }
@@ -163,7 +165,7 @@ export const UserManager = () => {
       toast.success(`User ${action} successfully`);
       loadUsers();
     } catch (error) {
-      console.error("Failed to toggle status:", error);
+      // console.error("Failed to toggle status:", error);
       toast.error(
         error.response?.data?.message || "Failed to update user status"
       );
@@ -183,7 +185,7 @@ export const UserManager = () => {
       setShowEditModal(false);
       setEditingUser(null);
     } catch (error) {
-      console.error("Failed to update user:", error);
+      // console.error("Failed to update user:", error);
       toast.error(
         error.response?.data?.message || "Failed to update user profile"
       );
@@ -286,13 +288,22 @@ export const UserManager = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary">
-            User Management
-          </h2>
-          <p className="text-sm text-text-secondary">
-            Manage students, admins, and user accounts
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="font-medium hidden sm:inline">Back</span>
+          </Link>
+          <div className="flex flex-col">
+            <h2 className="text-xl font-bold text-text-primary">
+              User Management
+            </h2>
+            <p className="text-sm text-text-secondary mt-1">
+              Manage students, admins, and user accounts
+            </p>
+          </div>
         </div>
         <button
           onClick={() => setShowRegisterModal(true)}
@@ -302,7 +313,6 @@ export const UserManager = () => {
           Register Student
         </button>
       </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-border p-4">

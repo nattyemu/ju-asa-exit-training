@@ -12,8 +12,10 @@ import {
   Clock,
   Calendar,
   BookOpen,
+  ChevronLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 export const NotificationsPage = () => {
   const { user } = useAuth();
@@ -105,7 +107,7 @@ export const NotificationsPage = () => {
         } catch (error) {
           if (!isMounted || error.name === "AbortError") return;
 
-          console.error("Failed to fetch unstarted stats:", error);
+          // console.error("Failed to fetch unstarted stats:", error);
           // If API fails, still show exams without counts
           setActiveExamsWithStats(getActiveExams());
         } finally {
@@ -257,14 +259,21 @@ export const NotificationsPage = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="font-medium hidden sm:inline">Back</span>
+              </Link>
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <Bell className="w-6 h-6 text-white" />
               </div>
-              <div>
+              <div className="flex flex-col">
                 <h1 className="text-xl font-bold text-text-primary">
                   Notification Management
                 </h1>
-                <p className="text-sm text-text-secondary">
+                <p className="text-sm text-text-secondary mt-1">
                   Send reminders and announcements to users
                 </p>
               </div>
@@ -272,7 +281,6 @@ export const NotificationsPage = () => {
           </div>
         </div>
       </header>
-
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Tabs */}

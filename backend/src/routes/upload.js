@@ -58,15 +58,15 @@ router.put("/:type", upload.single("image"), async (req, res) => {
       try {
         await fs.access(oldFilePath);
         await fs.unlink(oldFilePath);
-        console.log(`✅ Successfully deleted old file: ${oldFilename}`);
+        // console.log(`✅ Successfully deleted old file: ${oldFilename}`);
       } catch (error) {
         if (error.code === "ENOENT") {
-          console.log(`⚠️ Old file not found: ${oldFilename}`);
+          // console.log(`⚠️ Old file not found: ${oldFilename}`);
         } else {
-          console.error(
-            `❌ Error deleting old file ${oldFilename}:`,
-            error.message
-          );
+          // console.error(
+          //   `❌ Error deleting old file ${oldFilename}:`,
+          //   error.message
+          // );
           // Continue with upload even if deletion fails
         }
       }
@@ -82,7 +82,7 @@ router.put("/:type", upload.single("image"), async (req, res) => {
       oldFilename: oldFilename || null,
     });
   } catch (error) {
-    console.error("Error updating image:", error);
+    // console.error("Error updating image:", error);
     res.status(500).json({
       success: false,
       message: "Error updating image",
@@ -110,15 +110,15 @@ router.put("/:type/:filename", upload.single("image"), async (req, res) => {
       try {
         await fs.access(oldFilePath);
         await fs.unlink(oldFilePath);
-        console.log(`✅ Successfully deleted old file: ${filename}`);
+        // console.log(`✅ Successfully deleted old file: ${filename}`);
       } catch (error) {
         if (error.code === "ENOENT") {
-          console.log(`⚠️ Old file not found: ${filename}`);
+          // console.log(`⚠️ Old file not found: ${filename}`);
         } else {
-          console.error(
-            `❌ Error deleting old file ${filename}:`,
-            error.message
-          );
+          // console.error(
+          //   `❌ Error deleting old file ${filename}:`,
+          //   error.message
+          // );
           // Continue with upload even if deletion fails
         }
       }
@@ -134,7 +134,7 @@ router.put("/:type/:filename", upload.single("image"), async (req, res) => {
       oldFilename: filename !== "undefined" ? filename : null,
     });
   } catch (error) {
-    console.error("Error updating image:", error);
+    // console.error("Error updating image:", error);
     res.status(500).json({
       success: false,
       message: "Error updating image",
@@ -157,13 +157,13 @@ router.delete("/:type/:filename", async (req, res) => {
 
     const filePath = getFilePath(type, filename);
 
-    console.log(`Attempting to delete image: ${filePath}`);
+    // console.log(`Attempting to delete image: ${filePath}`);
 
     // Check if file exists
     try {
       await fs.access(filePath);
     } catch (error) {
-      console.log(`⚠️ Image file not found: ${filename}`);
+      // console.log(`⚠️ Image file not found: ${filename}`);
       return res.status(404).json({
         success: false,
         message: "Image file not found",
@@ -172,7 +172,7 @@ router.delete("/:type/:filename", async (req, res) => {
 
     // Delete the file
     await fs.unlink(filePath);
-    console.log(`✅ Successfully deleted image: ${filename}`);
+    // console.log(`✅ Successfully deleted image: ${filename}`);
 
     res.status(200).json({
       success: true,
@@ -180,7 +180,7 @@ router.delete("/:type/:filename", async (req, res) => {
       filename: filename,
     });
   } catch (error) {
-    console.error("Error deleting image:", error);
+    // console.error("Error deleting image:", error);
     res.status(500).json({
       success: false,
       message: "Error deleting image",
@@ -211,13 +211,13 @@ router.delete("/:type/url/:imageUrl", async (req, res) => {
 
     const filePath = getFilePath(type, filename);
 
-    console.log(`Attempting to delete image by URL: ${filePath}`);
+    // console.log(`Attempting to delete image by URL: ${filePath}`);
 
     // Check if file exists
     try {
       await fs.access(filePath);
     } catch (error) {
-      console.log(`⚠️ Image file not found: ${filename}`);
+      // console.log(`⚠️ Image file not found: ${filename}`);
       return res.status(404).json({
         success: false,
         message: "Image file not found",
@@ -226,7 +226,7 @@ router.delete("/:type/url/:imageUrl", async (req, res) => {
 
     // Delete the file
     await fs.unlink(filePath);
-    console.log(`✅ Successfully deleted image: ${filename}`);
+    // console.log(`✅ Successfully deleted image: ${filename}`);
 
     res.status(200).json({
       success: true,
@@ -234,7 +234,7 @@ router.delete("/:type/url/:imageUrl", async (req, res) => {
       filename: filename,
     });
   } catch (error) {
-    console.error("Error deleting image by URL:", error);
+    // console.error("Error deleting image by URL:", error);
     res.status(500).json({
       success: false,
       message: "Error deleting image",

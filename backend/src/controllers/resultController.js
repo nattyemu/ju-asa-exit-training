@@ -114,9 +114,9 @@ export const getStudentResult = async (req, res) => {
 
     // Verify consistency - This is for debugging/logging
     if (correctAnswers !== actualCorrectCount) {
-      console.warn(
-        `Result consistency warning: Result table has ${correctAnswers} correct, but detailed count is ${actualCorrectCount}`
-      );
+      // console.warn(
+      //   `Result consistency warning: Result table has ${correctAnswers} correct, but detailed count is ${actualCorrectCount}`
+      // );
     }
 
     // Get exam average for comparison
@@ -217,7 +217,7 @@ export const getStudentResult = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get student result error:", error);
+    // console.error("Get student result error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve exam result",
@@ -246,7 +246,7 @@ export const getExamRankings = async (req, res) => {
 
     // Check if rankings is an array
     if (!Array.isArray(rankings)) {
-      console.error("Rankings is not an array:", rankings);
+      // console.error("Rankings is not an array:", rankings);
       return res.status(200).json({
         success: true,
         data: {
@@ -312,7 +312,7 @@ export const getExamRankings = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get exam rankings error:", error);
+    // console.error("Get exam rankings error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve exam rankings",
@@ -374,7 +374,7 @@ export const getStudentResultHistory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get result history error:", error);
+    // console.error("Get result history error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve result history",
@@ -437,7 +437,7 @@ export const getSubjectPerformance = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get subject performance error:", error);
+    // console.error("Get subject performance error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve subject performance",
@@ -731,7 +731,7 @@ export const getDetailedResult = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get detailed result error:", error);
+    // console.error("Get detailed result error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve exam results",

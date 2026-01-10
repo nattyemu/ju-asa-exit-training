@@ -92,7 +92,7 @@ export const calculateScore = async (studentExamId) => {
       answers: detailedResults,
     };
   } catch (error) {
-    console.error("Error calculating score:", error);
+    // console.error("Error calculating score:", error);
     throw new Error("Failed to calculate exam score");
   }
 };
@@ -121,7 +121,7 @@ export const updateAnswerCorrectness = async (
         );
     }
   } catch (error) {
-    console.error("Error updating answer correctness:", error);
+    // console.error("Error updating answer correctness:", error);
     throw new Error("Failed to update answer correctness");
   }
 };

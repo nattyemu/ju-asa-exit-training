@@ -9,7 +9,7 @@ export const profileService = {
       // Upload new image if provided
       if (imageFile && imageFile instanceof File) {
         try {
-          console.log("Uploading profile image:", imageFile.name);
+          // console.log("Uploading profile image:", imageFile.name);
           const formData = new FormData();
           formData.append("image", imageFile);
 
@@ -21,7 +21,7 @@ export const profileService = {
 
           if (uploadResponse.data.success && uploadResponse.data.url) {
             imageUrl = uploadResponse.data.url;
-            console.log(`Image uploaded successfully: ${imageUrl}`);
+            // console.log(`Image uploaded successfully: ${imageUrl}`);
 
             // If there was an old image, delete it
             if (
@@ -33,19 +33,19 @@ export const profileService = {
               if (oldFilename && oldFilename !== "undefined") {
                 try {
                   await api.delete(`/upload/profiles/${oldFilename}`);
-                  console.log(`✅ Deleted old image: ${oldFilename}`);
+                  // console.log(`✅ Deleted old image: ${oldFilename}`);
                 } catch (deleteError) {
-                  console.warn(
-                    `⚠️ Failed to delete old image: ${deleteError.message}`
-                  );
+                  // console.warn(
+                  //   `⚠️ Failed to delete old image: ${deleteError.message}`
+                  // );
                 }
               }
             }
           } else {
-            console.warn("Image upload failed:", uploadResponse.data.message);
+            // console.warn("Image upload failed:", uploadResponse.data.message);
           }
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+          // console.error("Failed to upload image:", uploadError);
         }
       }
 
@@ -55,18 +55,18 @@ export const profileService = {
         profileImageUrl: imageUrl || profileData.profileImageUrl || null,
       };
 
-      console.log("Sending profile update request with data:", requestData);
+      // console.log("Sending profile update request with data:", requestData);
 
       const response = await api.put("/user/profile", requestData);
-      console.log("Profile update response:", response.data);
+      // console.log("Profile update response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error updating profile:", error);
-      console.error("Error details:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
+      // console.error("Error updating profile:", error);
+      // console.error("Error details:", {
+      //   status: error.response?.status,
+      //   data: error.response?.data,
+      //   message: error.message,
+      // });
       throw error;
     }
   },
@@ -90,11 +90,11 @@ export const profileService = {
         return { success: true, message: "Invalid filename" };
       }
 
-      console.log(`Deleting profile image: ${filename}`);
+      // console.log(`Deleting profile image: ${filename}`);
       const response = await api.delete(`/upload/profiles/${filename}`);
       return response.data;
     } catch (error) {
-      console.error("Error deleting profile image:", error);
+      // console.error("Error deleting profile image:", error);
       return {
         success: false,
         message: "Failed to delete profile image",
@@ -117,7 +117,7 @@ export const profileService = {
 
       return response.data;
     } catch (error) {
-      console.error("Error uploading profile image:", error);
+      // console.error("Error uploading profile image:", error);
       throw error;
     }
   },

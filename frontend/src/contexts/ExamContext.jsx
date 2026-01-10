@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { examService } from "../services/examService";
 import { useAuth } from "./AuthContext";
-import toast from "react-hot-toast";
+import { shuffleQuestionOptions } from "../utils/shuffleUtils";
 
 const ExamContext = createContext({});
 
@@ -71,9 +71,18 @@ export const ExamProvider = ({ children }) => {
   const loadActiveSession = async () => {
     try {
       setIsLoading(true);
-      console.log("🔄 ExamContext: Loading active session...");
+      // console.log("🔄 ExamContext: Loading active session...");
 
       const response = await examService.getActiveSession();
+
+      // Handle 404 or success:false gracefully - no active session is normal
+      if (
+        response.status === 404 ||
+        (response.data && !response.data.success)
+      ) {
+        // console.log("📭 ExamContext: No active session found (normal state)");
+        return false; // No active session is a normal state, not an error
+      }
 
       if (response.data.success && response.data.data) {
         const {
@@ -85,23 +94,63 @@ export const ExamProvider = ({ children }) => {
           needsAutoSubmit,
         } = response.data.data;
 
-        console.log("✅ ExamContext: Session found:", {
-          sessionId: session?.id,
-          examId: exam?.id,
-          questionCount: questions?.length,
-          needsAutoSubmit,
-        });
+        // console.log("✅ ExamContext: Session found:", {
+        //   sessionId: session?.id,
+        //   examId: exam?.id,
+        //   questionCount: questions?.length,
+        //   needsAutoSubmit,
+        // });
 
         // If session needs auto-submit, DO NOT load it
         if (needsAutoSubmit) {
-          console.log("⚠️ ExamContext: Session needs auto-submit, clearing");
+          // console.log("⚠️ ExamContext: Session needs auto-submit, clearing");
           clearExamState();
           return false;
         }
 
         setCurrentSession(session);
         setCurrentExam(exam);
-        setQuestions(questions || []);
+
+        // ========== ADD THE SHUFFLING CODE HERE ==========
+        let processedQuestions = questions || [];
+
+        if (processedQuestions.length > 0 && user?.id) {
+          // Simple synchronous processing
+          processedQuestions = processedQuestions.map((question) => {
+            try {
+              const shuffled = shuffleQuestionOptions(
+                question,
+                user.id,
+                question.id
+              );
+              return {
+                ...question, // IMPORTANT: Keep all original properties
+                shuffledOptions: shuffled.shuffledOptions,
+                optionMapping: shuffled.optionMapping,
+                originalCorrectAnswer: question.correctAnswer,
+              };
+            } catch (error) {
+              // console.error("Error shuffling question:", error);
+              // Return original question if shuffling fails
+              return {
+                ...question,
+                shuffledOptions: [
+                  { key: "A", value: question.optionA },
+                  { key: "B", value: question.optionB },
+                  { key: "C", value: question.optionC },
+                  { key: "D", value: question.optionD },
+                ],
+                optionMapping: { A: "A", B: "B", C: "C", D: "D" },
+                originalCorrectAnswer: question.correctAnswer,
+              };
+            }
+          });
+        }
+
+        // console.log("✅ Processed questions:", processedQuestions.length);
+        setQuestions(processedQuestions);
+        // ========== END SHUFFLING CODE ==========
+
         setNeedsAutoSubmit(false);
 
         // Convert saved answers to object
@@ -123,25 +172,32 @@ export const ExamProvider = ({ children }) => {
         }
 
         return true; // Successfully loaded
-      } else {
-        console.log("📭 ExamContext: No active session found in response");
-        return false; // No session
       }
+
+      return false; // No session
     } catch (error) {
-      console.log("❌ ExamContext: Error loading session:", error.message);
+      // Handle 404 errors silently - they're normal when no active session
+      if (error.response?.status === 404) {
+        // console.log("📭 ExamContext: No active session (404)");
+        return false;
+      }
+
+      // Only log non-404 errors
+      // console.log("❌ ExamContext: Error loading session:", error.message);
       return false; // Error or no session
     } finally {
       setIsLoading(false);
-      console.log("🏁 ExamContext: loadActiveSession completed");
+      // console.log("🏁 ExamContext: loadActiveSession completed");
     }
   };
+
   // Update the useEffect that loads on mount
   // useEffect(() => {
   //   if (user?.role === "STUDENT") {
-  //     console.log("🚀 ExamContext: User is student, loading session...");
+  // console.log("🚀 ExamContext: User is student, loading session...");
   //     loadActiveSession();
   //   } else {
-  //     console.log("👤 ExamContext: User is not student, clearing session");
+  // console.log("👤 ExamContext: User is not student, clearing session");
   //     clearExamState();
   //   }
   // }, [user]);
@@ -159,17 +215,17 @@ export const ExamProvider = ({ children }) => {
   // Update the useEffect that loads on mount
   // useEffect(() => {
   //   if (user?.role === "STUDENT") {
-  //     console.log("🚀 ExamContext: User is student, loading session...");
+  // console.log("🚀 ExamContext: User is student, loading session...");
   //     loadActiveSession();
   //   } else {
-  //     console.log("👤 ExamContext: User is not student, clearing session");
+  // console.log("👤 ExamContext: User is not student, clearing session");
   //     clearExamState();
   //   }
   // }, [user]);
 
   const startExam = async (examId) => {
     try {
-      console.log("🔄 ExamContext: Checking for active sessions...");
+      // console.log("🔄 ExamContext: Checking for active sessions...");
 
       // First, check if there's any active session
       const sessionResponse = await examService.getActiveSession();
@@ -205,7 +261,7 @@ export const ExamProvider = ({ children }) => {
         redirectToDashboard: true,
       };
     } catch (error) {
-      console.error("❌ ExamContext load error:", error);
+      // console.error("❌ ExamContext load error:", error);
       return {
         success: false,
         message: "Failed to load exam session",
@@ -215,7 +271,7 @@ export const ExamProvider = ({ children }) => {
 
   const saveAnswer = async (questionId, chosenAnswer, isAutosave = false) => {
     if (!currentSession) {
-      console.error("No active session when trying to save answer");
+      // console.error("No active session when trying to save answer");
       return { success: false, message: "No active session" };
     }
 
@@ -243,7 +299,7 @@ export const ExamProvider = ({ children }) => {
         message: response.data.message,
       };
     } catch (error) {
-      console.error("Save answer error in context:", error);
+      // console.error("Save answer error in context:", error);
 
       // Don't revert on network errors during auto-save
       if (!isAutosave || error.code !== "ERR_NETWORK") {
@@ -301,7 +357,7 @@ export const ExamProvider = ({ children }) => {
         count: answersArray.length,
       };
     } catch (error) {
-      console.error("Save all answers error:", error);
+      // console.error("Save all answers error:", error);
       return {
         success: false,
         message: error.response?.data?.message || "Failed to save answers",
@@ -321,7 +377,7 @@ export const ExamProvider = ({ children }) => {
       }
       return { success: false, message: response.data.message };
     } catch (error) {
-      console.error("Auto-submit failed:", error);
+      // console.error("Auto-submit failed:", error);
       return {
         success: false,
         message: error.response?.data?.message || "Auto-submit failed",
@@ -330,7 +386,7 @@ export const ExamProvider = ({ children }) => {
       setIsSubmitting(false);
     }
   };
-  const submitExam = async (isAutoSubmit = false) => {
+  const submitExam = async (isAutoSubmit = false, onSuccessCallback) => {
     if (!currentSession || isSubmitting) {
       return {
         success: false,
@@ -350,6 +406,9 @@ export const ExamProvider = ({ children }) => {
       );
 
       if (response.data.success) {
+        if (onSuccessCallback) {
+          onSuccessCallback(response.data.data);
+        }
         // IMPORTANT: Clear state BEFORE returning
         clearExamState();
 
@@ -373,7 +432,7 @@ export const ExamProvider = ({ children }) => {
 
       return { success: false, message: response.data.message };
     } catch (error) {
-      console.error("Submit exam error:", error);
+      // console.error("Submit exam error:", error);
 
       if (error.response?.status === 400) {
         if (error.response.data.message?.includes("already submitted")) {

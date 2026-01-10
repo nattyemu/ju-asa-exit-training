@@ -17,7 +17,7 @@ export const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login form submitted", { email, password });
+    // console.log("Login form submitted", { email, password });
 
     if (!email || !password) {
       toast.error("Please enter both email and password");
@@ -27,21 +27,21 @@ export const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      console.log("Calling login function...");
+      // console.log("Calling login function...");
       const result = await login(email, password);
-      console.log("Login result:", result);
+      // console.log("Login result:", result);
 
       if (result.success) {
         toast.success("Login successful!");
         // Get redirect path from location state or default to dashboard
         const from = location.state?.from?.pathname || "/dashboard";
-        console.log("Redirecting to:", from);
+        // console.log("Redirecting to:", from);
         navigate(from, { replace: true });
       } else {
         toast.error(result.message || "Login failed");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      // console.error("Login error:", error);
       toast.error(error.message || "An error occurred during login");
     } finally {
       setIsLoading(false);

@@ -19,6 +19,7 @@ import {
   Crown,
   Medal,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { examService } from "../../services/examService";
 import { adminService } from "../../services/adminService";
@@ -104,7 +105,7 @@ export const ProgressDashboard = () => {
         progressRes.value?.data?.success
       ) {
         const progressData = progressRes.value.data.data;
-        console.log("Progress Data:", progressData);
+        // console.log("Progress Data:", progressData);
         setProgress(progressData);
 
         // Extract completed exams for dropdown
@@ -195,7 +196,7 @@ export const ProgressDashboard = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to load progress data:", error);
+      // console.error("Failed to load progress data:", error);
       toast.error("Failed to load progress data");
     } finally {
       setLoading(false);
@@ -223,7 +224,7 @@ export const ProgressDashboard = () => {
         });
       }
     } catch (error) {
-      console.error(`Failed to load rankings for exam ${examId}:`, error);
+      // console.error(`Failed to load rankings for exam ${examId}:`, error);
       toast.error("Failed to load rankings");
       setSelectedExamRankings({
         rankings: [],
@@ -437,13 +438,22 @@ export const ProgressDashboard = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-text-primary">
-            My Progress Dashboard
-          </h2>
-          <p className="text-sm text-text-secondary">
-            Track performance, analyze strengths, and improve your scores
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="font-medium hidden sm:inline">Back</span>
+          </Link>
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-bold text-text-primary">
+              My Progress Dashboard
+            </h2>
+            <p className="text-sm text-text-secondary mt-1">
+              Track performance, analyze strengths, and improve your scores
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

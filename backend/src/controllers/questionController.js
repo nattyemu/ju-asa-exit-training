@@ -107,7 +107,7 @@ export const addQuestion = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Add question error:", error);
+    // console.error("Add question error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -222,7 +222,7 @@ export const getExamQuestions = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get exam questions error:", error);
+    // console.error("Get exam questions error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch questions",
@@ -283,7 +283,7 @@ export const updateQuestion = async (req, res) => {
       data: updatedQuestion,
     });
   } catch (error) {
-    console.error("Update question error:", error);
+    // console.error("Update question error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -390,7 +390,7 @@ export const deleteQuestion = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Delete question error:", error);
+    // console.error("Delete question error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to delete question",
@@ -464,7 +464,7 @@ export const bulkImportQuestions = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Bulk import questions error:", error);
+    // console.error("Bulk import questions error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -552,7 +552,7 @@ export const getQuestionStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get question stats error:", error);
+    // console.error("Get question stats error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch question statistics",

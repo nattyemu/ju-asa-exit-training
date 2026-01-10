@@ -141,7 +141,7 @@ const ProfileUpdateModal = ({
         university: userProfile?.university || "JU University",
       };
 
-      console.log("Updating profile with data:", updateData);
+      // console.log("Updating profile with data:", updateData);
 
       // Call profile service
       const response = await profileService.updateProfile(
@@ -157,8 +157,8 @@ const ProfileUpdateModal = ({
         toast.error(response.message || "Failed to update profile");
       }
     } catch (error) {
-      console.error("Profile update error:", error);
-      console.error("Error response:", error.response?.data);
+      // console.error("Profile update error:", error);
+      // console.error("Error response:", error.response?.data);
 
       // Show detailed error message
       if (error.response?.data?.message) {
