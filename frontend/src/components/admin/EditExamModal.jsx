@@ -146,7 +146,7 @@ export const EditExamModal = ({ exam, onClose, onSubmit }) => {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
                   errors.title ? "border-red-300" : "border-border"
                 }`}
-                placeholder="e.g., Ethiopian Exit Exam Practice 2024"
+                placeholder="e.g., Ethiopian Exit Exam Practice 2026"
               />
               {errors.title && (
                 <p className="mt-1 text-sm text-red-600">{errors.title}</p>
