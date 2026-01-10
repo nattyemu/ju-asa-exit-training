@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { examService } from "../services/examService";
 import { useAuth } from "./AuthContext";
-import toast from "react-hot-toast";
+import { shuffleQuestionOptions } from "../utils/shuffleUtils";
 
 const ExamContext = createContext({});
 
@@ -101,7 +101,47 @@ export const ExamProvider = ({ children }) => {
 
         setCurrentSession(session);
         setCurrentExam(exam);
-        setQuestions(questions || []);
+
+        // ========== ADD THE SHUFFLING CODE HERE ==========
+        let processedQuestions = questions || [];
+
+        if (processedQuestions.length > 0 && user?.id) {
+          // Simple synchronous processing
+          processedQuestions = processedQuestions.map((question) => {
+            try {
+              const shuffled = shuffleQuestionOptions(
+                question,
+                user.id,
+                question.id
+              );
+              return {
+                ...question, // IMPORTANT: Keep all original properties
+                shuffledOptions: shuffled.shuffledOptions,
+                optionMapping: shuffled.optionMapping,
+                originalCorrectAnswer: question.correctAnswer,
+              };
+            } catch (error) {
+              console.error("Error shuffling question:", error);
+              // Return original question if shuffling fails
+              return {
+                ...question,
+                shuffledOptions: [
+                  { key: "A", value: question.optionA },
+                  { key: "B", value: question.optionB },
+                  { key: "C", value: question.optionC },
+                  { key: "D", value: question.optionD },
+                ],
+                optionMapping: { A: "A", B: "B", C: "C", D: "D" },
+                originalCorrectAnswer: question.correctAnswer,
+              };
+            }
+          });
+        }
+
+        console.log("✅ Processed questions:", processedQuestions.length);
+        setQuestions(processedQuestions);
+        // ========== END SHUFFLING CODE ==========
+
         setNeedsAutoSubmit(false);
 
         // Convert saved answers to object
@@ -135,6 +175,7 @@ export const ExamProvider = ({ children }) => {
       console.log("🏁 ExamContext: loadActiveSession completed");
     }
   };
+
   // Update the useEffect that loads on mount
   // useEffect(() => {
   //   if (user?.role === "STUDENT") {

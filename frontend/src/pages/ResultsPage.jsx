@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
+import {
+  shuffleQuestionOptions,
+  mapOriginalToShuffled,
+} from "../utils/shuffleUtils";
 
 export const ResultsPage = () => {
   const location = useLocation();
@@ -34,7 +38,8 @@ export const ResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [showIncorrectOnly, setShowIncorrectOnly] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
-  const [showAnswers, setShowAnswers] = useState(false); // Start with answers hidden
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [shuffledAnswers, setShuffledAnswers] = useState([]);
 
   const { examData, resultData } = location.state || {};
 
@@ -92,6 +97,50 @@ export const ResultsPage = () => {
         };
 
         setResult(formattedResult);
+
+        // Shuffle answers for display using the same userId
+        if (formattedResult.answers.length > 0 && user?.id) {
+          const shuffled = formattedResult.answers.map((answer) => {
+            try {
+              const shuffledData = shuffleQuestionOptions(
+                answer.question,
+                user.id,
+                answer.questionId
+              );
+
+              return {
+                ...answer,
+                shuffledOptions: shuffledData.shuffledOptions,
+                optionMapping: shuffledData.optionMapping,
+                displayChosenAnswer: mapOriginalToShuffled(
+                  answer.chosenAnswer,
+                  shuffledData.optionMapping
+                ),
+                displayCorrectAnswer: mapOriginalToShuffled(
+                  answer.question.correctAnswer,
+                  shuffledData.optionMapping
+                ),
+              };
+            } catch (error) {
+              console.error("Error shuffling answer:", error);
+              return {
+                ...answer,
+                shuffledOptions: [
+                  { key: "A", value: answer.question.optionA },
+                  { key: "B", value: answer.question.optionB },
+                  { key: "C", value: answer.question.optionC },
+                  { key: "D", value: answer.question.optionD },
+                ],
+                displayChosenAnswer: answer.chosenAnswer,
+                displayCorrectAnswer: answer.question.correctAnswer,
+              };
+            }
+          });
+          setShuffledAnswers(shuffled);
+        } else {
+          setShuffledAnswers(formattedResult.answers);
+        }
+
         loadRankings(examId);
       }
     } catch (error) {
@@ -101,6 +150,7 @@ export const ResultsPage = () => {
         if (examData && resultData) {
           const mockResult = createMockResultFromState();
           setResult(mockResult);
+          setShuffledAnswers([]);
         } else {
           toast.error("Exam results not found");
         }
@@ -211,7 +261,6 @@ export const ResultsPage = () => {
     exam,
     review,
     comparison,
-    answers,
     subjectAnalysis,
     session,
     hasAnswers,
@@ -237,7 +286,7 @@ export const ResultsPage = () => {
     return `#${rank}`;
   };
 
-  const filteredAnswers = (answers || []).filter((answer) => {
+  const filteredAnswers = shuffledAnswers.filter((answer) => {
     if (showIncorrectOnly && answer.isCorrect) return false;
     if (selectedSubject && answer.question?.subject !== selectedSubject)
       return false;
@@ -245,7 +294,7 @@ export const ResultsPage = () => {
   });
 
   const subjects = [
-    ...new Set((answers || []).map((a) => a.question?.subject).filter(Boolean)),
+    ...new Set(shuffledAnswers.map((a) => a.question?.subject).filter(Boolean)),
   ];
 
   return (
@@ -480,7 +529,7 @@ export const ResultsPage = () => {
                     Question Review
                   </h2>
                   <p className="text-sm text-text-secondary mt-1">
-                    {answers.length} questions •{" "}
+                    {shuffledAnswers.length} questions •{" "}
                     <span className="font-medium">
                       {showAnswers
                         ? "Answers & explanations visible"
@@ -489,7 +538,7 @@ export const ResultsPage = () => {
                   </p>
                 </div>
 
-                {answers.length > 0 && (
+                {shuffledAnswers.length > 0 && (
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => setShowIncorrectOnly(!showIncorrectOnly)}
@@ -638,23 +687,31 @@ export const ResultsPage = () => {
                           {answer.question.questionText}
                         </p>
 
-                        {/* Options - ALWAYS VISIBLE */}
+                        {/* Options - ALWAYS VISIBLE (SHUFFLED) */}
                         <div className="mb-4">
                           <h4 className="text-sm font-medium text-text-secondary mb-3">
                             Options:
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {["A", "B", "C", "D"].map((option) => {
+                            {(
+                              answer.shuffledOptions || [
+                                { key: "A", value: answer.question.optionA },
+                                { key: "B", value: answer.question.optionB },
+                                { key: "C", value: answer.question.optionC },
+                                { key: "D", value: answer.question.optionD },
+                              ]
+                            ).map((option) => {
                               const isCorrectAnswer =
-                                option === answer.question.correctAnswer;
-                              const isChosen = option === answer.chosenAnswer;
+                                option.key === answer.displayCorrectAnswer;
+                              const isChosen =
+                                option.key === answer.displayChosenAnswer;
                               const isUnanswered = !answer.isAnswered;
                               const isShowingCorrect =
                                 showAnswers && isCorrectAnswer;
 
                               return (
                                 <div
-                                  key={option}
+                                  key={option.key}
                                   className={`p-3 border rounded-lg transition-all duration-200 ${
                                     isShowingCorrect
                                       ? "bg-green-50 border-green-300 shadow-sm"
@@ -673,7 +730,7 @@ export const ResultsPage = () => {
                                           : "bg-gray-200 text-gray-700"
                                       }`}
                                     >
-                                      {option}
+                                      {option.key}
                                     </div>
                                     <div className="flex-1">
                                       <span
@@ -685,7 +742,7 @@ export const ResultsPage = () => {
                                             : "text-text-primary"
                                         }`}
                                       >
-                                        {answer.question[`option${option}`]}
+                                        {option.value}
                                       </span>
                                       <div className="flex items-center gap-1 mt-1">
                                         {isChosen && (
@@ -741,7 +798,7 @@ export const ResultsPage = () => {
                       </div>
                     </div>
                   ))
-                ) : answers.length === 0 ? (
+                ) : shuffledAnswers.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <AlertCircle className="w-10 h-10 text-gray-400" />
@@ -773,27 +830,6 @@ export const ResultsPage = () => {
                   </div>
                 )}
               </div>
-
-              {/* Instructions */}
-              {/* {!showAnswers && answers.length > 0 && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <Eye className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-text-secondary">
-                        <span className="font-medium text-blue-700">
-                          ✓ Blue
-                        </span>{" "}
-                        indicates your answer.{" "}
-                        <span className="font-medium text-green-700">
-                          Click "Show Answers"
-                        </span>{" "}
-                        to see correct answers and explanations.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )} */}
             </div>
           </div>
         </div>

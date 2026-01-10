@@ -459,8 +459,6 @@ export const ExamPage = () => {
     );
   }
 
-  // ====== REST OF THE COMPONENT ======
-
   const handleAnswerSelect = async (chosenAnswer) => {
     if (!currentSession?.id || !currentQuestion || examExpired) {
       return;
