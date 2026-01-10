@@ -59,18 +59,18 @@ export const shuffleQuestionOptions = (question, userId, questionId) => {
   });
 
   // Debug log
-  console.log("🎲 Shuffle Result:", {
-    userId,
-    questionId,
-    seed,
-    originalOrder: originalOptions.map((o) => o.originalKey),
-    shuffledOrder: shuffledOptions.map((o) => ({
-      display: o.key,
-      original: o.originalKey,
-    })),
-    optionMapping,
-    correctAnswer: question.correctAnswer,
-  });
+  // console.log("🎲 Shuffle Result:", {
+  //   userId,
+  //   questionId,
+  //   seed,
+  //   originalOrder: originalOptions.map((o) => o.originalKey),
+  //   shuffledOrder: shuffledOptions.map((o) => ({
+  //     display: o.key,
+  //     original: o.originalKey,
+  //   })),
+  //   optionMapping,
+  //   correctAnswer: question.correctAnswer,
+  // });
 
   return {
     shuffledOptions,
@@ -81,31 +81,31 @@ export const shuffleQuestionOptions = (question, userId, questionId) => {
 
 export const mapAnswerToOriginal = (selectedAnswer, optionMapping) => {
   if (!selectedAnswer || !optionMapping) {
-    console.log("❌ mapAnswerToOriginal: Missing params", {
-      selectedAnswer,
-      optionMapping,
-    });
+    // console.log("❌ mapAnswerToOriginal: Missing params", {
+    //   selectedAnswer,
+    //   optionMapping,
+    // });
     return selectedAnswer;
   }
 
   const selected = selectedAnswer.toUpperCase();
   const original = optionMapping[selected];
 
-  console.log("🗺️ Mapping selected to original:", {
-    selected,
-    optionMapping,
-    original: original || selected,
-  });
+  // console.log("🗺️ Mapping selected to original:", {
+  //   selected,
+  //   optionMapping,
+  //   original: original || selected,
+  // });
 
   return original || selected;
 };
 
 export const mapOriginalToShuffled = (originalAnswer, optionMapping) => {
   if (!originalAnswer || !optionMapping) {
-    console.log("❌ mapOriginalToShuffled: Missing params", {
-      originalAnswer,
-      optionMapping,
-    });
+    // console.log("❌ mapOriginalToShuffled: Missing params", {
+    //   originalAnswer,
+    //   optionMapping,
+    // });
     return originalAnswer;
   }
 
@@ -119,6 +119,6 @@ export const mapOriginalToShuffled = (originalAnswer, optionMapping) => {
     }
   }
 
-  console.log("⚠️ No reverse mapping found for:", original);
+  // console.log("⚠️ No reverse mapping found for:", original);
   return originalAnswer;
 };
