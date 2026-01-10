@@ -3,6 +3,11 @@ import { studentExams, exams, results, answers } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { eq, and, isNull } from "drizzle-orm";
 import {
+  checkAndAwardAchievements,
+  checkDelayedAchievements,
+  checkImmediateAchievements,
+} from "../services/achievementService.js";
+import {
   calculateScore,
   updateAnswerCorrectness,
 } from "../services/scoringService.js";
@@ -268,6 +273,32 @@ export const submitExam = async (req, res) => {
       .from(results)
       .where(eq(results.studentExamId, sessionId));
 
+    // ✅ NEW: Check achievements WITH score and rank data immediately
+    let achievementResult = null;
+    try {
+      // We have score and rank from finalResult, check achievements immediately
+      achievementResult = await checkImmediateAchievements(
+        userId,
+        sessionId,
+        finalResult?.score || 0, // Pass the score
+        finalResult?.rank || null // Pass the rank (might be null if ranking takes time)
+      );
+
+      if (achievementResult.data?.newlyEarned?.length > 0) {
+        // console.log(
+        //   `🎉 Achievements earned for student ${userId}:`,
+        //   achievementResult.data.newlyEarned.map((a) => a.title),
+        //   `(${achievementResult.data.newlyEarned.length} total)`
+        // );
+      }
+    } catch (achievementError) {
+      // console.error(
+      //   "Failed to check immediate achievements:",
+      //   achievementError
+      // );
+      // Don't fail the whole request if achievements fail
+    }
+
     const messages = {
       submitted: "Exam submitted successfully",
       auto_submitted: "Exam auto-submitted successfully",
@@ -298,6 +329,12 @@ export const submitExam = async (req, res) => {
           updated: updatedAnswersCount,
         },
         isAutoSubmit,
+        achievements: achievementResult?.success
+          ? {
+              newlyEarned: achievementResult.data.newlyEarned,
+              totalEarned: achievementResult.data.totalEarned,
+            }
+          : null,
       },
     });
   } catch (error) {

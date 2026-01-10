@@ -67,6 +67,7 @@ export const ProgressDashboard = () => {
   });
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [showAllRankings, setShowAllRankings] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   // Image modal state
   const [imageModal, setImageModal] = useState({
@@ -80,7 +81,6 @@ export const ProgressDashboard = () => {
   }, [timeRange]);
 
   useEffect(() => {
-    // Load rankings when exam is selected
     if (selectedExamId) {
       loadExamRankings(selectedExamId);
     }
@@ -95,7 +95,7 @@ export const ProgressDashboard = () => {
         await Promise.allSettled([
           examService.getResultHistory(),
           examService.getSubjectPerformance(),
-          adminService.getMyAchievements(),
+          examService.getMyAchievements(),
           adminService.getStudyTimeAnalytics(),
         ]);
 
@@ -105,7 +105,6 @@ export const ProgressDashboard = () => {
         progressRes.value?.data?.success
       ) {
         const progressData = progressRes.value.data.data;
-        // console.log("Progress Data:", progressData);
         setProgress(progressData);
 
         // Extract completed exams for dropdown
@@ -134,7 +133,10 @@ export const ProgressDashboard = () => {
             date: result.session?.submittedAt
               ? new Date(result.session.submittedAt).toLocaleDateString(
                   "en-US",
-                  { month: "short", day: "numeric" }
+                  {
+                    month: "short",
+                    day: "numeric",
+                  }
                 )
               : `Exam ${index + 1}`,
           }));
@@ -151,27 +153,71 @@ export const ProgressDashboard = () => {
         setSubjectPerformance(Array.isArray(subjectsData) ? subjectsData : []);
       }
 
-      // Handle achievements
-      if (
-        achievementsRes.status === "fulfilled" &&
-        achievementsRes.value?.data
-      ) {
-        const responseData = achievementsRes.value.data;
-        let achievementsData = [];
+      // ✅ FIXED: Handle achievements with 0/1 to false/true conversion
+      if (achievementsRes.status === "fulfilled") {
+        const response = achievementsRes.value;
 
-        if (responseData.success && responseData.data) {
-          if (Array.isArray(responseData.data)) {
-            achievementsData = responseData.data;
-          } else if (responseData.data.achievements) {
-            achievementsData = responseData.data.achievements;
-          } else if (responseData.data.myAchievements) {
-            achievementsData = responseData.data.myAchievements;
+        // console.log("🎯 Achievements API Response:", {
+        //   status: response?.status,
+        //   success: response?.data?.success,
+        //   data: response?.data?.data,
+        // });
+
+        if (response?.data?.success) {
+          const apiData = response.data.data;
+
+          // Check all possible locations for achievements array
+          let achievementsArray = [];
+
+          if (apiData?.achievements && Array.isArray(apiData.achievements)) {
+            achievementsArray = apiData.achievements;
+          } else if (
+            apiData?.myAchievements &&
+            Array.isArray(apiData.myAchievements)
+          ) {
+            achievementsArray = apiData.myAchievements;
+          } else if (Array.isArray(apiData)) {
+            achievementsArray = apiData;
+          } else if (
+            apiData?.data?.achievements &&
+            Array.isArray(apiData.data.achievements)
+          ) {
+            achievementsArray = apiData.data.achievements;
           }
-        }
 
-        setAchievements(
-          Array.isArray(achievementsData) ? achievementsData : []
-        );
+          // ✅ CRITICAL FIX: Transform 0/1 to false/true for earned field
+          const transformedAchievements = achievementsArray.map(
+            (achievement) => ({
+              ...achievement,
+              // Convert earned from 0/1 to false/true
+              earned: achievement.earned === 1 || achievement.earned === true,
+              // Ensure progress is a number
+              progress: Number(achievement.progress) || 0,
+            })
+          );
+
+          // console.log(
+          //   `✅ Loaded ${transformedAchievements.length} achievements (transformed)`
+          // );
+          setAchievements(transformedAchievements);
+
+          // Log earned count
+          const earnedCount = transformedAchievements.filter(
+            (a) => a.earned
+          ).length;
+          // console.log(
+          //   `📊 Earned: ${earnedCount}/${transformedAchievements.length}`
+          // );
+        } else {
+          // console.log("❌ Achievements API unsuccessful");
+          setAchievements([]);
+        }
+      } else {
+        // console.log(
+        //   "❌ Achievements promise rejected:",
+        //   achievementsRes.reason
+        // );
+        setAchievements([]);
       }
 
       // Handle study time analytics
@@ -210,7 +256,6 @@ export const ProgressDashboard = () => {
       const rankingsRes = await examService.getRankings(examId, 100);
 
       if (rankingsRes.data?.success && rankingsRes.data.data?.rankings) {
-        // Find the selected exam from completed exams
         const selectedExam = completedExams.find((exam) => exam.id === examId);
         const myRank = selectedExam
           ? progress?.results?.find((r) => r.exam?.id === examId)?.result?.rank
@@ -224,7 +269,6 @@ export const ProgressDashboard = () => {
         });
       }
     } catch (error) {
-      // console.error(`Failed to load rankings for exam ${examId}:`, error);
       toast.error("Failed to load rankings");
       setSelectedExamRankings({
         rankings: [],
@@ -247,14 +291,13 @@ export const ProgressDashboard = () => {
         passedExams: 0,
         passRate: 0,
         improvement: 0,
-        improvementType: "no-change", // 'improving', 'declining', 'no-change'
+        improvementType: "no-change",
       };
     }
 
     const results = progress.results;
     const totalExams = results.length;
 
-    // Calculate average including zero scores
     const totalScore = results.reduce(
       (sum, r) => sum + (r.result?.score || 0),
       0
@@ -273,8 +316,6 @@ export const ProgressDashboard = () => {
     const passRate =
       totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0;
 
-    // FIXED: Calculate improvement properly
-    // Get only exams with scores, sorted by date
     const scoredExams = results
       .filter((r) => r.result?.score !== undefined)
       .sort(
@@ -291,7 +332,6 @@ export const ProgressDashboard = () => {
       const lastScore = scoredExams[scoredExams.length - 1]?.result?.score || 0;
       improvement = lastScore - firstScore;
 
-      // Determine improvement type
       if (improvement > 0) {
         improvementType = "improving";
       } else if (improvement < 0) {
@@ -312,10 +352,12 @@ export const ProgressDashboard = () => {
 
   const stats = calculateStats();
 
-  // Safe achievements filtering
+  // ✅ FIXED: Handle both 0/1 and true/false for earned achievements
   const earnedAchievementsCount = Array.isArray(achievements)
-    ? achievements.filter((a) => a && a.earned).length
+    ? achievements.filter((a) => a && (a.earned === true || a.earned === 1))
+        .length
     : 0;
+
   const totalAchievementsCount = Array.isArray(achievements)
     ? achievements.length
     : 0;
@@ -562,21 +604,45 @@ export const ProgressDashboard = () => {
           </div>
         </div>
 
+        {/* Achievements Card */}
         <div className="bg-white rounded-xl border border-border p-6 hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-text-secondary mb-1">Achievements</p>
               <p className="text-3xl font-bold text-text-primary">
-                {earnedAchievementsCount}/{totalAchievementsCount}
+                {earnedAchievementsCount}
+                <span className="text-lg text-gray-400">
+                  /{totalAchievementsCount}
+                </span>
               </p>
-              <div className="text-xs text-text-secondary mt-1">
-                {totalAchievementsCount - earnedAchievementsCount} more to
-                unlock
+              <div className="text-xs text-text-secondary mt-1 flex items-center gap-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                  <span>{earnedAchievementsCount} earned</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-gray-300 mr-1"></div>
+                  <span>
+                    {totalAchievementsCount - earnedAchievementsCount} to go
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
               <Trophy className="w-6 h-6 text-purple-600" />
             </div>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-600 rounded-full transition-all duration-500"
+              style={{
+                width: `${
+                  totalAchievementsCount > 0
+                    ? (earnedAchievementsCount / totalAchievementsCount) * 100
+                    : 0
+                }%`,
+              }}
+            ></div>
           </div>
         </div>
       </div>
@@ -670,7 +736,6 @@ export const ProgressDashboard = () => {
                         const profileImageUrl =
                           student.student?.profile?.profileImageUrl;
 
-                        // FIXED: Correct time display - timeSpent is already in minutes
                         const timeTaken =
                           student.timeSpent !== undefined &&
                           student.timeSpent !== null
@@ -1282,72 +1347,257 @@ export const ProgressDashboard = () => {
         </div>
       )}
 
-      {/* Achievements Section */}
-      {Array.isArray(achievements) && achievements.length > 0 && (
-        <div className="bg-white rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-yellow-600" />
-              <h3 className="font-medium text-text-primary">
-                Your Achievements
-              </h3>
+      {/* ✅ Beautiful Achievements Section */}
+      {achievements.length > 0 && (
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 shadow-lg p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Your Achievements
+                  </h3>
+                  <p className="text-gray-600">
+                    Unlock badges by reaching milestones
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-text-secondary">
-              {earnedAchievementsCount} of {totalAchievementsCount} unlocked (
-              {Math.round(
-                (earnedAchievementsCount / totalAchievementsCount) * 100
-              )}
-              %)
+            <div className="mt-4 md:mt-0 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-3 rounded-xl border border-blue-200">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-gray-900">
+                  {earnedAchievementsCount}
+                  <span className="text-gray-500">
+                    /{totalAchievementsCount}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">Badges Earned</div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {achievements.slice(0, 8).map((achievement, index) => {
-              if (!achievement) return null;
+          {/* Overall Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between text-sm text-gray-700 mb-2">
+              <span>Overall Progress</span>
+              <span className="font-semibold">
+                {Math.round(
+                  (earnedAchievementsCount / totalAchievementsCount) * 100
+                )}
+                %
+              </span>
+            </div>
+            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-500 to-emerald-600 rounded-full transition-all duration-700"
+                style={{
+                  width: `${
+                    (earnedAchievementsCount / totalAchievementsCount) * 100
+                  }%`,
+                }}
+              ></div>
+            </div>
+          </div>
 
-              const Icon = achievement.icon || Trophy;
-              const isEarned = achievement.earned || false;
+          {/* Achievement Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {achievements.map((achievement) => {
+              const isEarned =
+                achievement.earned === true || achievement.earned === 1;
+              const progressPercent = achievement.progress || 0;
+
+              // Get color based on achievement points
+              const getBadgeColor = () => {
+                if (isEarned) {
+                  if (achievement.points >= 75)
+                    return "from-purple-500 to-pink-600";
+                  if (achievement.points >= 50)
+                    return "from-blue-500 to-cyan-600";
+                  if (achievement.points >= 30)
+                    return "from-green-500 to-emerald-600";
+                  return "from-yellow-500 to-orange-500";
+                }
+                return "from-gray-300 to-gray-400";
+              };
+
+              // Get progress description based on metadata
+              const getProgressDescription = () => {
+                if (isEarned) return "Unlocked";
+
+                const metadata = achievement.metadata || {};
+
+                switch (achievement.code) {
+                  case "exam_enthusiast":
+                    const examsCompleted = metadata.examsCompleted || 0;
+                    return `${examsCompleted}/10 exams completed`;
+
+                  case "consistent_performer":
+                    const highScores = metadata.highScores || 0;
+                    return `${highScores}/3 exams with 80%+ score`;
+
+                  case "subject_master":
+                    if (metadata.bestAccuracy && metadata.bestSubject) {
+                      return `${Math.round(
+                        metadata.bestAccuracy
+                      )}% accuracy in ${metadata.bestSubject}`;
+                    } else if (metadata.subject && metadata.accuracy) {
+                      // This is for earned achievements
+                      return `${Math.round(metadata.accuracy)}% accuracy in ${
+                        metadata.subject
+                      }`;
+                    } else {
+                      return "At least need 5+ questions in a subject";
+                    }
+
+                  default:
+                    return `${progressPercent}% complete`;
+                }
+              };
 
               return (
                 <div
-                  key={achievement.id || index}
-                  className={`border rounded-lg p-4 transition-all ${
+                  key={achievement.id}
+                  className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
                     isEarned
-                      ? "border-green-200 bg-green-50 hover:bg-green-100"
-                      : "border-gray-200 bg-gray-50 hover:bg-gray-100 opacity-75"
+                      ? "border-transparent bg-gradient-to-br from-white to-gray-50"
+                      : "border-gray-200 bg-white"
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-3">
+                  {/* Badge Background */}
+                  <div
+                    className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${getBadgeColor()} opacity-10`}
+                  ></div>
+
+                  {/* Badge Icon */}
+                  <div className="relative z-10 pt-6 px-6">
                     <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 ${
                         isEarned
-                          ? "bg-green-100 text-green-600"
+                          ? `bg-gradient-to-br ${getBadgeColor()} text-white shadow-lg`
                           : "bg-gray-100 text-gray-400"
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
+                      {achievement.icon || "🏆"}
+                      {isEarned && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs border-2 border-white">
+                          ✓
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-text-primary">
-                        {achievement.title || "Achievement"}
-                      </div>
-                      <div
-                        className={`text-xs ${
-                          isEarned
-                            ? "text-green-700 font-medium"
-                            : "text-gray-500"
+
+                    {/* Achievement Details */}
+                    <div className="text-center mb-4">
+                      <h4
+                        className={`font-bold text-lg mb-1 ${
+                          isEarned ? "text-gray-900" : "text-gray-700"
                         }`}
                       >
-                        {isEarned ? "✓ Earned" : "Not earned yet"}
+                        {achievement.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {achievement.description}
+                      </p>
+
+                      {/* Points Badge */}
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
+                          isEarned
+                            ? achievement.points >= 75
+                              ? "bg-purple-100 text-purple-800"
+                              : achievement.points >= 50
+                              ? "bg-blue-100 text-blue-800"
+                              : achievement.points >= 30
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {achievement.points} points
+                      </span>
+                    </div>
+
+                    {/* PROGRESS BAR FOR EACH ACHIEVEMENT */}
+                    <div className="mt-4 mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium text-gray-700">
+                          {getProgressDescription()}
+                        </span>
+                        <span className="text-xs font-bold text-gray-900">
+                          {progressPercent}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            isEarned
+                              ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                              : progressPercent >= 80
+                              ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                              : progressPercent >= 50
+                              ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+                              : "bg-gradient-to-r from-red-500 to-pink-500"
+                          }`}
+                          style={{ width: `${progressPercent}%` }}
+                        ></div>
                       </div>
                     </div>
+
+                    {/* Status */}
+                    <div
+                      className={`text-center py-2 rounded-lg text-sm font-medium ${
+                        isEarned
+                          ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200"
+                          : "bg-gray-50 text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {isEarned ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Unlocked</span>
+                          {achievement.earnedAt && (
+                            <span className="text-xs text-gray-500">
+                              {new Date(
+                                achievement.earnedAt
+                              ).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        "Locked"
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    {achievement.description || "Complete this achievement"}
-                  </p>
                 </div>
               );
             })}
+          </div>
+
+          {/* Legend */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex flex-wrap gap-4 justify-center text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600"></div>
+                <span>Legendary (75+ pts)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600"></div>
+                <span>Epic (50+ pts)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-600"></div>
+                <span>Rare (30+ pts)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500"></div>
+                <span>Common (10+ pts)</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -387,7 +387,7 @@ export const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-text-primary">
-                  Exit Exam Dashboard
+                  Exit Exam Practicing Dashboard
                 </h1>
                 <p className="text-sm text-text-secondary">
                   Welcome back, {user?.profile?.fullName}

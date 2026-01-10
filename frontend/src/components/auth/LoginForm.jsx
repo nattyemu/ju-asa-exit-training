@@ -53,119 +53,111 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-xl border border-border overflow-hidden">
-        {/* Header */}
-        <div className="bg-background-dark p-8 text-center">
-          <div className="w-16 h-16 bg-primary mx-auto rounded-full flex items-center justify-center mb-4">
-            <LogIn className="w-8 h-8 text-white" />
+    <div className="w-full animate-fade-in">
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-5">
+          {/* Email Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+                <Mail className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
+                placeholder="student@ju.edu.et"
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Ethiopian Exit Exam Platform
-          </h1>
-          <p className="text-primary-light opacity-80">
-            Sign in to access your training dashboard
-          </p>
+
+          {/* Password Field */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+            </div>
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+                <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
+                placeholder="Enter your password"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl mt-2"
+            style={{
+              backgroundColor: "#134E4A",
+              backgroundImage:
+                "linear-gradient(135deg, #134E4A 0%, #0D3A36 100%)",
+            }}
+          >
+            {isLoading ? (
+              <>
+                <LoadingSpinner size="sm" color="white" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Sign In</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8">
-          <div className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Mail className="w-5 h-5 text-text-secondary" />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-background-light border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
-                  placeholder="student@university.edu.et"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-text-secondary">
-                  Password
-                </label>
-              </div>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Lock className="w-5 h-5 text-text-secondary" />
-                </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 bg-background-light border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
-                  placeholder="Enter your password"
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-primary transition-colors disabled:opacity-50"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" color="white" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  Sign In
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Admin Note */}
-          <div className="mt-8 pt-6 border-t border-border">
-            <p className="text-sm text-text-secondary text-center">
-              <span className="font-medium text-primary">Note:</span> Student
-              registration is managed by administrators. Contact administrators
-              for account access.
+        {/* Admin Note */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">Important:</span> Student
+              registration is managed by administrators only. If you need
+              account access, please contact your department administrator.
             </p>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
 
-      {/* Footer */}
-      <div className="mt-8 text-center">
-        <p className="text-sm text-text-secondary">
-          © {new Date().getFullYear()} JU ASA Exit Exam Training Platform
+      {/* Footer - Hidden on mobile, shown on desktop */}
+      <div className="hidden lg:block mt-8 text-center">
+        <p className="text-sm text-gray-500">
+          © {new Date().getFullYear()} JU ASA Exit Exam Platform
         </p>
-        <p className="text-xs text-text-secondary mt-1">
-          For official use by authorized JU ASA students.
+        <p className="text-xs text-gray-400 mt-1">
+          For official use by authorized JU ASA students
         </p>
       </div>
     </div>
