@@ -36,6 +36,38 @@ export const startExamSession = async (req, res) => {
     const { examId } = validationResult.data;
     const userId = req.user.userId;
 
+    const examData = await db.select().from(exams).where(eq(exams.id, examId));
+    const examName = examData[0]?.title;
+
+    // FIRST: Check if student has ANY active session (for any exam)
+    const anyActiveSession = await db
+      .select()
+      .from(studentExams)
+      .where(
+        and(
+          eq(studentExams.studentId, userId),
+          isNull(studentExams.submittedAt)
+        )
+      )
+      .limit(1);
+
+    if (anyActiveSession.length > 0) {
+      const activeSession = anyActiveSession[0];
+
+      // Check if it's for the same exam
+      if (activeSession.examId === examId) {
+        // Same exam - will be handled below in transaction
+        console.log("Active session found for same exam");
+      } else {
+        // Different exam - block creation
+        return res.status(400).json({
+          success: false,
+          message: `You have an active session for another exam (Name: ${examName}). Please complete or cancel it first.`,
+          hasActiveSession: true,
+          activeExamId: activeSession.examId,
+        });
+      }
+    }
     // Check if exam exists and is active
     const [exam] = await db
       .select()
@@ -717,7 +749,8 @@ export const saveMultipleAnswers = async (req, res) => {
       });
     }
 
-    const { answers: answersData } = validationResult.data;
+    const { answers: answersData, isAutoSubmit = false } =
+      validationResult.data;
     const sessionId = parseInt(req.params.sessionId);
     const userId = req.user.userId;
 
@@ -768,7 +801,7 @@ export const saveMultipleAnswers = async (req, res) => {
     const startedAt = new Date(session.startedAt);
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
 
-    if (now > durationEnd) {
+    if (now > durationEnd && !isAutoSubmit) {
       return res.status(400).json({
         success: false,
         message:
@@ -1109,6 +1142,21 @@ export const cancelSession = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Cannot cancel already submitted exam",
+      });
+    }
+
+    // NEW: Check if exam has been active for more than 15 minutes
+    const startedAt = new Date(session.startedAt);
+    const now = new Date();
+    const minutesElapsed = Math.floor((now - startedAt) / (1000 * 60));
+
+    if (minutesElapsed > 15) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot cancel exam after 15 minutes of starting. Please submit or let it auto-submit.",
+        minutesElapsed,
+        maxAllowed: 15,
       });
     }
 

@@ -38,7 +38,7 @@ export const Dashboard = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isStartingExam, setIsStartingExam] = useState(false);
+  const [startingExamId, setStartingExamId] = useState(null);
   useEffect(() => {
     if (user?.role === "STUDENT") {
       loadExams();
@@ -91,14 +91,77 @@ export const Dashboard = () => {
   };
 
   const handleStartExam = async (exam) => {
-    if (isStartingExam) {
+    if (startingExamId) {
       toast.info("Please wait, starting exam...");
       return;
     }
 
-    setIsStartingExam(true);
+    setStartingExamId(exam.id);
 
     try {
+      // FIRST: Check if student has any active session (for any exam)
+      try {
+        const activeSessionResponse = await examService.getActiveSession();
+
+        if (
+          activeSessionResponse.data.success &&
+          activeSessionResponse.data.data
+        ) {
+          const activeSession = activeSessionResponse.data.data.session;
+
+          // Check if active session is for THIS exam
+          if (activeSession.examId === exam.id) {
+            // Same exam - handle accordingly
+            if (exam.status === "COMPLETED") {
+              navigate(`/results`, {
+                state: {
+                  examData: exam,
+                  resultData: exam.result,
+                },
+              });
+              return;
+            }
+
+            if (exam.status === "IN_PROGRESS") {
+              const now = new Date();
+              const availableUntil = new Date(exam.availableUntil);
+
+              if (now > availableUntil) {
+                toast.info("This exam has expired. Showing results...");
+                navigate(`/results`, {
+                  state: {
+                    examData: exam,
+                    resultData: exam.result,
+                  },
+                });
+              } else {
+                navigate(`/exam`, {
+                  state: { examId: exam.id, examData: exam },
+                });
+              }
+              return;
+            }
+          } else {
+            // DIFFERENT exam - block and show message
+            toast.error(
+              `You have an active session for another exam. Please complete or cancel it first.`,
+              { duration: 3000 }
+            );
+
+            // Optionally: Navigate to the active exam
+            // navigate(`/exam`, {
+            //   state: { examId: activeSession.examId },
+            // });
+
+            setStartingExamId(null);
+            return;
+          }
+        }
+      } catch (error) {
+        // No active session or error - continue
+        console.log("No active session found, continuing...");
+      }
+
       // Handle completed exams
       if (exam.status === "COMPLETED") {
         navigate(`/results`, {
@@ -112,7 +175,6 @@ export const Dashboard = () => {
 
       // Handle in-progress exams
       if (exam.status === "IN_PROGRESS") {
-        // Check if exam is expired
         const now = new Date();
         const availableUntil = new Date(exam.availableUntil);
 
@@ -125,21 +187,23 @@ export const Dashboard = () => {
             },
           });
         } else {
-          // Still valid, continue exam
-          navigate(`/exam/${exam.id}`);
+          navigate(`/exam`, {
+            state: { examId: exam.id, examData: exam },
+          });
         }
         return;
       }
 
-      // NEW EXAM - Start new session
+      // NEW EXAM - Start new session (only if no active sessions)
       console.log("🚀 Dashboard: Starting NEW exam session for exam", exam.id);
 
       const startResponse = await examService.startExam(exam.id);
 
       if (startResponse.data.success) {
         console.log("✅ Dashboard: Exam session started successfully");
-        // Navigate to exam page
-        navigate(`/exam/${exam.id}`);
+        navigate(`/exam`, {
+          state: { examId: exam.id, examData: exam },
+        });
       } else {
         console.error(
           "❌ Dashboard: Failed to start exam:",
@@ -149,11 +213,15 @@ export const Dashboard = () => {
         // Handle specific errors
         if (startResponse.data.message.includes("already completed")) {
           toast.error("You have already completed this exam");
-          navigate(`/results/${exam.id}`);
+          navigate(`/results`, {
+            state: { examId: exam.id, examData: exam },
+          });
         } else if (startResponse.data.message.includes("already exists")) {
           // Session already exists
           toast.info("Resuming existing session...");
-          navigate(`/exam/${exam.id}`);
+          navigate(`/exam`, {
+            state: { examId: exam.id, examData: exam },
+          });
         } else {
           toast.error(startResponse.data.message || "Failed to start exam");
         }
@@ -164,7 +232,9 @@ export const Dashboard = () => {
       // Handle 409 (Conflict) - session already exists
       if (error.response?.status === 409) {
         toast.info("Resuming existing session...");
-        navigate(`/exam/${exam.id}`);
+        navigate(`/exam`, {
+          state: { examId: exam.id, examData: exam },
+        });
         return;
       }
 
@@ -174,28 +244,68 @@ export const Dashboard = () => {
         error.response.data.message?.includes("already completed")
       ) {
         toast.error("You have already completed this exam");
-        navigate(`/results/${exam.id}`);
+        navigate(`/results`, {
+          state: { examId: exam.id, examData: exam },
+        });
         return;
       }
 
       toast.error("Failed to start exam. Please try again.");
     } finally {
-      setIsStartingExam(false);
+      setStartingExamId(null);
     }
   };
   const loadExams = async () => {
     try {
       setIsLoading(true);
       const response = await examService.getAvailableExams();
+      console.log("📋 Exam response:", response.data); // ADD THIS LINE
+
       if (response.data.success) {
-        setExams(response.data.data.exams || []);
+        // Get exams from response
+        const examsData = response.data.data.exams || [];
+
+        // DEBUG: Check exam dates
+        examsData.forEach((exam, index) => {
+          console.log(`Exam ${index + 1}:`, {
+            id: exam.id,
+            title: exam.title,
+            createdAt: exam.createdAt,
+            availableFrom: exam.availableFrom,
+            availableUntil: exam.availableUntil,
+          });
+        });
+
+        // Sort exams by createdAt in descending order (newest first)
+        const sortedExams = examsData.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          console.log(
+            `Sorting: ${a.id} (${dateA}) vs ${b.id} (${dateB}) = ${
+              dateB - dateA
+            }`
+          ); // ADD THIS
+          return dateB - dateA; // Newest first (descending)
+        });
+
+        // DEBUG: Check sorted order
+        console.log(
+          "📊 Sorted exams:",
+          sortedExams.map((e) => ({
+            id: e.id,
+            title: e.title,
+            createdAt: e.createdAt,
+          }))
+        );
+
+        setExams(sortedExams);
       }
     } catch (error) {
       console.error("Failed to load exams:", error);
 
       // Don't show toast for 404 - it's normal when no exams
       if (error.response?.status !== 404) {
-        toast.error("Failed to load available exams");
+        // toast.error("Failed to load available exams");
       }
     } finally {
       setIsLoading(false);
@@ -716,7 +826,7 @@ export const Dashboard = () => {
                         key={exam.id}
                         exam={exam}
                         onStart={handleStartExam}
-                        isStarting={isStartingExam}
+                        isStarting={startingExamId === exam.id}
                       />
                     ))}
                   </div>

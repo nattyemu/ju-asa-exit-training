@@ -136,67 +136,65 @@ export const ExamProvider = ({ children }) => {
     }
   };
   // Update the useEffect that loads on mount
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      console.log("🚀 ExamContext: User is student, loading session...");
-      loadActiveSession();
-    } else {
-      console.log("👤 ExamContext: User is not student, clearing session");
-      clearExamState();
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     console.log("🚀 ExamContext: User is student, loading session...");
+  //     loadActiveSession();
+  //   } else {
+  //     console.log("👤 ExamContext: User is not student, clearing session");
+  //     clearExamState();
+  //   }
+  // }, [user]);
 
   // Reset when user changes
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      hasLoadedSessionRef.current = false; // Reset for new user
-      loadActiveSession();
-    } else {
-      clearExamState();
-      hasLoadedSessionRef.current = false;
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     hasLoadedSessionRef.current = false; // Reset for new user
+  //     loadActiveSession();
+  //   } else {
+  //     clearExamState();
+  //     hasLoadedSessionRef.current = false;
+  //   }
+  // }, [user]);
   // Update the useEffect that loads on mount
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      console.log("🚀 ExamContext: User is student, loading session...");
-      loadActiveSession();
-    } else {
-      console.log("👤 ExamContext: User is not student, clearing session");
-      clearExamState();
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.role === "STUDENT") {
+  //     console.log("🚀 ExamContext: User is student, loading session...");
+  //     loadActiveSession();
+  //   } else {
+  //     console.log("👤 ExamContext: User is not student, clearing session");
+  //     clearExamState();
+  //   }
+  // }, [user]);
 
   const startExam = async (examId) => {
-    // This function should ONLY resume existing sessions
-    // Dashboard should create new sessions
-
     try {
-      console.log("🔄 ExamContext: Loading existing session for exam:", examId);
+      console.log("🔄 ExamContext: Checking for active sessions...");
 
-      // Try to get active session
-      const response = await examService.getActiveSession();
+      // First, check if there's any active session
+      const sessionResponse = await examService.getActiveSession();
 
-      if (response.data.success && response.data.data) {
-        const { session, exam } = response.data.data;
+      if (sessionResponse.data.success && sessionResponse.data.data) {
+        const { session } = sessionResponse.data.data;
 
-        // Verify it's the right exam
-        if (session.examId !== examId) {
+        // Check if active session is for the requested exam
+        if (session.examId === parseInt(examId)) {
+          // Same exam - load it
+          await loadActiveSession();
+          return {
+            success: true,
+            message: "Loaded existing session",
+            isResumed: true,
+          };
+        } else {
+          // Different exam - block
           return {
             success: false,
-            message: `You have an active session for a different exam. Please complete it first.`,
+            message: `You have an active session for another exam (ID: ${session.examId}). Please complete it first.`,
             wrongExam: true,
             activeExamId: session.examId,
           };
         }
-
-        // Load the existing session data
-        await loadActiveSession();
-        return {
-          success: true,
-          message: "Loaded existing session",
-          isResumed: true,
-        };
       }
 
       // No active session found
@@ -272,7 +270,7 @@ export const ExamProvider = ({ children }) => {
     }
   };
 
-  const saveAllAnswers = async () => {
+  const saveAllAnswers = async (isAutoSubmit = false) => {
     if (!currentSession || !questions.length)
       return { success: false, message: "No active session or questions" };
 
@@ -290,7 +288,8 @@ export const ExamProvider = ({ children }) => {
 
       const response = await examService.saveAnswersBatch(
         currentSession.id,
-        answersArray
+        answersArray,
+        isAutoSubmit
       );
 
       // Clear localStorage backup after successful save
@@ -343,7 +342,7 @@ export const ExamProvider = ({ children }) => {
       setIsSubmitting(true);
 
       // Save any remaining answers first
-      await saveAllAnswers();
+      await saveAllAnswers(isAutoSubmit);
 
       const response = await examService.submitExam(
         currentSession.id,

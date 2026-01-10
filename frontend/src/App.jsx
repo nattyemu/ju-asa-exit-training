@@ -34,7 +34,7 @@ function AppContent() {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 4000,
+          duration: 3000,
           style: {
             background: "#363636",
             color: "#fff",
@@ -87,7 +87,7 @@ function AppContent() {
 
         {/* Student only routes */}
         <Route
-          path="/exam/:examId"
+          path="/exam"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <ExamGuard>

@@ -18,6 +18,7 @@ export const submitExamSchema = z.object({
       })
     )
     .optional(),
+  isAutoSubmit: z.boolean().default(false),
 });
 
 // Result query schema

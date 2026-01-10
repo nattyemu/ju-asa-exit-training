@@ -137,6 +137,8 @@ export const getAvailableExams = async (req, res) => {
         passingScore: exams.passingScore,
         createdAt: exams.createdAt,
         isActive: exams.isActive,
+        createdAt: exams.createdAt,
+        updatedAt: exams.updatedAt,
       })
       .from(exams)
       .where(eq(exams.isActive, true))
@@ -206,6 +208,8 @@ export const getAvailableExams = async (req, res) => {
         status,
         statusText,
         canStart,
+        createdAt: exam.createdAt,
+        updatedAt: exam.updatedAt,
         isCurrentlyAvailable,
         // Calculate remaining time in minutes
         timeRemaining: isCurrentlyAvailable
