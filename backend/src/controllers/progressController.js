@@ -161,7 +161,9 @@ export const getStudentAchievementsController = async (req, res) => {
  */
 export const getMyAchievementsController = async (req, res) => {
   try {
-    const studentId = req.user.id;
+    // FIX: Use userId from token (not id)
+    const studentId = req.user.userId; // Changed from req.user.id
+
     const result = await getStudentAchievements(studentId);
 
     if (!result.success) {
@@ -183,7 +185,6 @@ export const getMyAchievementsController = async (req, res) => {
     });
   }
 };
-
 /**
  * Get top achievers
  */

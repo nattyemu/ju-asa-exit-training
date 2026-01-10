@@ -126,6 +126,41 @@ export const results = mysqlTable(
     studentExamIdx: index("result_student_exam_idx").on(table.studentExamId),
   })
 );
+export const achievements = mysqlTable("achievements", {
+  id: int("id").primaryKey().autoincrement(),
+  code: varchar("code", { length: 100 }).notNull().unique(), // e.g., "first_exam", "perfect_score"
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  icon: varchar("icon", { length: 100 }).default("🏆"),
+  type: varchar("type", { length: 50 }).notNull(), // "exam", "score", "time", "consistency"
+  requirement: text("requirement"), // JSON string with requirements
+  points: int("points").default(10),
+  isActive: boolean("is_active").default(true),
+  createdAt: datetime("created_at").default(new Date()),
+});
+
+// 2. User achievements table (tracks which users earned which achievements)
+export const userAchievements = mysqlTable(
+  "user_achievements",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    userId: int("user_id").notNull(),
+    achievementId: int("achievement_id").notNull(),
+    earnedAt: datetime("earned_at").default(new Date()),
+    progress: int("progress").default(0), // For progressive achievements
+    metadata: text("metadata"), // JSON with details like score, time, etc.
+  },
+  (table) => ({
+    userAchievementIdx: uniqueIndex("user_achievement_idx").on(
+      table.userId,
+      table.achievementId
+    ),
+    userIdx: index("user_achievement_user_idx").on(table.userId),
+    achievementIdx: index("user_achievement_achievement_idx").on(
+      table.achievementId
+    ),
+  })
+);
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -135,6 +170,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   exams: many(studentExams),
   results: many(results),
+  achievements: many(userAchievements),
 }));
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -197,3 +233,19 @@ export const resultsRelations = relations(results, ({ one }) => ({
     references: [users.id],
   }),
 }));
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+  userAchievements: many(userAchievements),
+}));
+export const userAchievementsRelations = relations(
+  userAchievements,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userAchievements.userId],
+      references: [users.id],
+    }),
+    achievement: one(achievements, {
+      fields: [userAchievements.achievementId],
+      references: [achievements.id],
+    }),
+  })
+);
