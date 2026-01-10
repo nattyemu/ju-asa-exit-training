@@ -121,19 +121,22 @@ export const ExamPage = () => {
       await saveAllAnswers(true);
 
       // Submit with auto-submit flag
-      const result = await submitExam(true);
-
-      if (result.success || result.redirect || result.alreadySubmitted) {
+      const result = await submitExam(true, (resultData) => {
+        // This callback executes BEFORE state is cleared
         toast.success("Exam submitted successfully!", { id: loadingToast });
 
-        // Wait a moment for state to clear
-        setTimeout(() => {
-          navigate(`/results`, {
-            replace: true,
-            state: { examId: examId, examData: currentExam },
-          });
-        }, 1000);
-      } else {
+        // Navigate immediately, don't wait
+        navigate(`/results`, {
+          replace: true,
+          state: {
+            examId: examId,
+            examData: currentExam,
+            resultData: resultData,
+          },
+        });
+      });
+
+      if (!result.success) {
         toast.error("Failed to submit exam", { id: loadingToast });
       }
     } catch (error) {

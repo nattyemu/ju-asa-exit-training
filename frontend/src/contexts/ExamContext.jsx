@@ -75,6 +75,15 @@ export const ExamProvider = ({ children }) => {
 
       const response = await examService.getActiveSession();
 
+      // Handle 404 or success:false gracefully - no active session is normal
+      if (
+        response.status === 404 ||
+        (response.data && !response.data.success)
+      ) {
+        // console.log("📭 ExamContext: No active session found (normal state)");
+        return false; // No active session is a normal state, not an error
+      }
+
       if (response.data.success && response.data.data) {
         const {
           session,
@@ -163,11 +172,17 @@ export const ExamProvider = ({ children }) => {
         }
 
         return true; // Successfully loaded
-      } else {
-        // console.log("📭 ExamContext: No active session found in response");
-        return false; // No session
       }
+
+      return false; // No session
     } catch (error) {
+      // Handle 404 errors silently - they're normal when no active session
+      if (error.response?.status === 404) {
+        // console.log("📭 ExamContext: No active session (404)");
+        return false;
+      }
+
+      // Only log non-404 errors
       // console.log("❌ ExamContext: Error loading session:", error.message);
       return false; // Error or no session
     } finally {
@@ -371,7 +386,7 @@ export const ExamProvider = ({ children }) => {
       setIsSubmitting(false);
     }
   };
-  const submitExam = async (isAutoSubmit = false) => {
+  const submitExam = async (isAutoSubmit = false, onSuccessCallback) => {
     if (!currentSession || isSubmitting) {
       return {
         success: false,
@@ -391,6 +406,9 @@ export const ExamProvider = ({ children }) => {
       );
 
       if (response.data.success) {
+        if (onSuccessCallback) {
+          onSuccessCallback(response.data.data);
+        }
         // IMPORTANT: Clear state BEFORE returning
         clearExamState();
 
