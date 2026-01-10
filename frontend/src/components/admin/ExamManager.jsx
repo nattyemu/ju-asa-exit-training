@@ -61,7 +61,7 @@ export const ExamManager = () => {
         setPagination(response.data.data.pagination);
       }
     } catch (error) {
-      console.error("Failed to load exams:", error);
+      // console.error("Failed to load exams:", error);
       toast.error("Failed to load exams. Please try again.");
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export const ExamManager = () => {
         toast.error(response.data.message || "Failed to create exam");
       }
     } catch (error) {
-      console.error("Failed to create exam:", error);
+      // console.error("Failed to create exam:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {
@@ -99,7 +99,7 @@ export const ExamManager = () => {
         toast.error(response.data.message || "Failed to update exam");
       }
     } catch (error) {
-      console.error("Failed to update exam:", error);
+      // console.error("Failed to update exam:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {
@@ -122,7 +122,7 @@ export const ExamManager = () => {
         toast.error(response.data.message || "Failed to update exam status");
       }
     } catch (error) {
-      console.error("Failed to update exam status:", error);
+      // console.error("Failed to update exam status:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {

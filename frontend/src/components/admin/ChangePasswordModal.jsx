@@ -43,7 +43,7 @@ export const ChangePasswordModal = ({ user, onClose, onSubmit }) => {
         newPassword: formData.newPassword,
       });
     } catch (error) {
-      console.error("Failed to change password:", error);
+      // console.error("Failed to change password:", error);
       if (error.response?.data?.message) {
         setErrors({ general: error.response.data.message });
       }

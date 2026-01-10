@@ -114,7 +114,7 @@ export const mapOriginalToShuffled = (originalAnswer, optionMapping) => {
   // Reverse lookup: find which shuffled key points to this original
   for (const [shuffledKey, originalKey] of Object.entries(optionMapping)) {
     if (originalKey === original) {
-      console.log("🔄 Reverse mapping found:", { original, shuffledKey });
+      // console.log("🔄 Reverse mapping found:", { original, shuffledKey });
       return shuffledKey;
     }
   }

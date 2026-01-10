@@ -60,11 +60,11 @@ export const Dashboard = () => {
     try {
       setIsLoadingStats(true);
       const response = await adminService.getAdminDashboard();
-      console.log("Admin dashboard API response:", response);
+      // console.log("Admin dashboard API response:", response);
 
       if (response.data.success) {
         const data = response.data.data;
-        console.log("Admin dashboard data:", data);
+        // console.log("Admin dashboard data:", data);
 
         // Extract stats from the correct structure
         const systemOverview = data.systemOverview || {};
@@ -77,7 +77,7 @@ export const Dashboard = () => {
         });
       }
     } catch (error) {
-      console.error("Failed to load admin stats:", error);
+      // console.error("Failed to load admin stats:", error);
       toast.error("Failed to load admin dashboard statistics");
       setAdminStats({
         activeExams: 0,
@@ -159,7 +159,7 @@ export const Dashboard = () => {
         }
       } catch (error) {
         // No active session or error - continue
-        console.log("No active session found, continuing...");
+        // console.log("No active session found, continuing...");
       }
 
       // Handle completed exams
@@ -195,20 +195,20 @@ export const Dashboard = () => {
       }
 
       // NEW EXAM - Start new session (only if no active sessions)
-      console.log("🚀 Dashboard: Starting NEW exam session for exam", exam.id);
+      // console.log("🚀 Dashboard: Starting NEW exam session for exam", exam.id);
 
       const startResponse = await examService.startExam(exam.id);
 
       if (startResponse.data.success) {
-        console.log("✅ Dashboard: Exam session started successfully");
+        // console.log("✅ Dashboard: Exam session started successfully");
         navigate(`/exam`, {
           state: { examId: exam.id, examData: exam },
         });
       } else {
-        console.error(
-          "❌ Dashboard: Failed to start exam:",
-          startResponse.data.message
-        );
+        // console.error(
+        //   "❌ Dashboard: Failed to start exam:",
+        //   startResponse.data.message
+        // );
 
         // Handle specific errors
         if (startResponse.data.message.includes("already completed")) {
@@ -227,7 +227,7 @@ export const Dashboard = () => {
         }
       }
     } catch (error) {
-      console.error("❌ Dashboard: Error starting exam:", error);
+      // console.error("❌ Dashboard: Error starting exam:", error);
 
       // Handle 409 (Conflict) - session already exists
       if (error.response?.status === 409) {
@@ -259,7 +259,7 @@ export const Dashboard = () => {
     try {
       setIsLoading(true);
       const response = await examService.getAvailableExams();
-      console.log("📋 Exam response:", response.data); // ADD THIS LINE
+      // console.log("📋 Exam response:", response.data); // ADD THIS LINE
 
       if (response.data.success) {
         // Get exams from response
@@ -267,41 +267,41 @@ export const Dashboard = () => {
 
         // DEBUG: Check exam dates
         examsData.forEach((exam, index) => {
-          console.log(`Exam ${index + 1}:`, {
-            id: exam.id,
-            title: exam.title,
-            createdAt: exam.createdAt,
-            availableFrom: exam.availableFrom,
-            availableUntil: exam.availableUntil,
-          });
+          // console.log(`Exam ${index + 1}:`, {
+          //   id: exam.id,
+          //   title: exam.title,
+          //   createdAt: exam.createdAt,
+          //   availableFrom: exam.availableFrom,
+          //   availableUntil: exam.availableUntil,
+          // });
         });
 
         // Sort exams by createdAt in descending order (newest first)
         const sortedExams = examsData.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);
-          console.log(
-            `Sorting: ${a.id} (${dateA}) vs ${b.id} (${dateB}) = ${
-              dateB - dateA
-            }`
-          ); // ADD THIS
-          return dateB - dateA; // Newest first (descending)
+          // console.log(
+          //   `Sorting: ${a.id} (${dateA}) vs ${b.id} (${dateB}) = ${
+          //     dateB - dateA
+          //   }`
+          // );
+          return dateB - dateA;
         });
 
         // DEBUG: Check sorted order
-        console.log(
-          "📊 Sorted exams:",
-          sortedExams.map((e) => ({
-            id: e.id,
-            title: e.title,
-            createdAt: e.createdAt,
-          }))
-        );
+        // console.log(
+        // "📊 Sorted exams:",
+        // sortedExams.map((e) => ({
+        //   id: e.id,
+        //   title: e.title,
+        //   createdAt: e.createdAt,
+        // }))
+        // );
 
         setExams(sortedExams);
       }
     } catch (error) {
-      console.error("Failed to load exams:", error);
+      // console.error("Failed to load exams:", error);
 
       // Don't show toast for 404 - it's normal when no exams
       if (error.response?.status !== 404) {
@@ -342,7 +342,7 @@ export const Dashboard = () => {
       imageUrl = "/" + imageUrl;
     }
 
-    console.log("Getting profile image URL for:", backendUrl + imageUrl);
+    // console.log("Getting profile image URL for:", backendUrl + imageUrl);
     return backendUrl + imageUrl;
   };
 

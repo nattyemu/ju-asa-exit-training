@@ -86,7 +86,7 @@ export const ExamPage = () => {
       currentSession?.id &&
       !hasNoQuestions
     ) {
-      console.log("No questions found, auto-cancelling session");
+      // console.log("No questions found, auto-cancelling session");
       setHasNoQuestions(true);
       cancelExam();
     }
@@ -106,7 +106,7 @@ export const ExamPage = () => {
     isSubmittingRef.current = true;
 
     try {
-      console.log("🔄 ExamPage: Time up - Starting auto-submit");
+      // console.log("🔄 ExamPage: Time up - Starting auto-submit");
 
       // Clear any pending saves
       if (saveAnswerDebounceRef.current) {
@@ -137,7 +137,7 @@ export const ExamPage = () => {
         toast.error("Failed to submit exam", { id: loadingToast });
       }
     } catch (error) {
-      console.error("❌ Auto-submit error:", error);
+      // console.error("❌ Auto-submit error:", error);
       toast.error("Failed to auto-submit exam");
     } finally {
       isSubmittingRef.current = false;
@@ -175,7 +175,7 @@ export const ExamPage = () => {
 
       // Check if time has expired
       if (remainingMs <= 0) {
-        console.log("⏰ Time expired!");
+        // console.log("⏰ Time expired!");
         setExamExpired(true);
         if (!timeExpiredToastShown.current) {
           handleExamTimeUp();
@@ -184,7 +184,7 @@ export const ExamPage = () => {
 
       return remainingSeconds;
     } catch (error) {
-      console.error("Error refreshing remaining time:", error);
+      // console.error("Error refreshing remaining time:", error);
       return 0;
     }
   }, [
@@ -199,17 +199,17 @@ export const ExamPage = () => {
   // Main exam loading logic
   useEffect(() => {
     if (mountedRef.current) {
-      console.log("🔄 ExamPage: Re-render, skipping load");
+      // console.log("🔄 ExamPage: Re-render, skipping load");
       return;
     }
 
     mountedRef.current = true;
-    console.log("📱 ExamPage: Mounted with examId from state:", examId);
+    // console.log("📱 ExamPage: Mounted with examId from state:", examId);
 
     const loadExam = async () => {
       // Check if we have examId from state
       if (!examId || user?.role !== "STUDENT") {
-        console.log("❌ No examId in state, redirecting to dashboard");
+        // console.log("❌ No examId in state, redirecting to dashboard");
         navigate("/dashboard");
         return;
       }
@@ -227,7 +227,7 @@ export const ExamPage = () => {
             navigate("/dashboard");
             return;
           }
-          console.log("✅ Session found");
+          // console.log("✅ Session found");
 
           // Refresh time on load
           refreshRemainingTime();
@@ -237,7 +237,7 @@ export const ExamPage = () => {
         }
 
         // Load session
-        console.log("⚠️ Loading session...");
+        // console.log("⚠️ Loading session...");
         await loadActiveSession();
 
         // Refresh time after loading
@@ -247,7 +247,7 @@ export const ExamPage = () => {
 
         setIsLoading(false);
       } catch (error) {
-        console.error("Failed to load exam:", error);
+        // console.error("Failed to load exam:", error);
         toast.error("Failed to load exam");
         navigate("/dashboard");
       }
@@ -347,7 +347,7 @@ export const ExamPage = () => {
       }
 
       if (isSubmittingRef.current) {
-        console.log("Component unmounting while submitting...");
+        // console.log("Component unmounting while submitting...");
       }
     };
   }, []);
@@ -489,7 +489,7 @@ export const ExamPage = () => {
           }
         }
       } catch (error) {
-        console.error("Auto-save error:", error);
+        // console.error("Auto-save error:", error);
       }
     }, 2000);
   };
@@ -566,7 +566,7 @@ export const ExamPage = () => {
         isNavigatingRef.current = false;
       }
     } catch (error) {
-      console.error("Submit exam error:", error);
+      // console.error("Submit exam error:", error);
       toast.error("Failed to submit exam. Please try again.");
       isNavigatingRef.current = false;
     } finally {
@@ -591,7 +591,7 @@ export const ExamPage = () => {
         setShowConfirmCancel(false);
       }
     } catch (error) {
-      console.error("Cancel exam error:", error);
+      // console.error("Cancel exam error:", error);
       toast.error("Failed to cancel exam");
       setShowConfirmCancel(false);
     }

@@ -27,7 +27,7 @@ export const sendExamRemindersController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Send exam reminders controller error:", error);
+    // console.error("Send exam reminders controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send exam reminders",
@@ -64,7 +64,7 @@ export const sendUnstartedExamRemindersController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Send unstarted exam reminders controller error:", error);
+    // console.error("Send unstarted exam reminders controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send unstarted exam reminders",
@@ -104,7 +104,7 @@ export const sendSystemAnnouncementController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Send system announcement controller error:", error);
+    // console.error("Send system announcement controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send system announcement",
@@ -130,7 +130,7 @@ export const getUnstartedExamStatsController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    console.error("Get unstarted exam stats controller error:", error);
+    // console.error("Get unstarted exam stats controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get unstarted exam statistics",
@@ -150,7 +150,7 @@ export const getNotificationPreferencesController = async (req, res) => {
       data: preferences,
     });
   } catch (error) {
-    console.error("Get notification preferences controller error:", error);
+    // console.error("Get notification preferences controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get notification preferences",

@@ -94,7 +94,7 @@ export const EditExamModal = ({ exam, onClose, onSubmit }) => {
 
       await onSubmit(exam.id, dataToSubmit);
     } catch (error) {
-      console.error("Update failed:", error);
+      // console.error("Update failed:", error);
       // Error will be handled by parent component with toast
     } finally {
       setIsSubmitting(false);

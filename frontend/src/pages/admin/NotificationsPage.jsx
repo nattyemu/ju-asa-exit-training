@@ -105,7 +105,7 @@ export const NotificationsPage = () => {
         } catch (error) {
           if (!isMounted || error.name === "AbortError") return;
 
-          console.error("Failed to fetch unstarted stats:", error);
+          // console.error("Failed to fetch unstarted stats:", error);
           // If API fails, still show exams without counts
           setActiveExamsWithStats(getActiveExams());
         } finally {

@@ -81,7 +81,7 @@ export const getDepartmentPerformance = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("Department analytics error:", error);
+    // console.error("Department analytics error:", error);
     return {
       success: false,
       error: error.message,
@@ -120,7 +120,7 @@ export const getUniversityPerformance = async (examId) => {
       })),
     };
   } catch (error) {
-    console.error("University analytics error:", error);
+    // console.error("University analytics error:", error);
     return {
       success: false,
       error: error.message,

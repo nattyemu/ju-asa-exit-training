@@ -7,7 +7,7 @@ export const LoginPage = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  console.log("LoginPage rendering", { loading, isAuthenticated });
+  // console.log("LoginPage rendering", { loading, isAuthenticated });
 
   if (loading) {
     return (
@@ -21,7 +21,7 @@ export const LoginPage = () => {
   }
 
   if (isAuthenticated) {
-    console.log("User is authenticated, redirecting...");
+    // console.log("User is authenticated, redirecting...");
     // Get redirect path from URL or default to dashboard
     const from = location.state?.from?.pathname || "/dashboard";
     return <Navigate to={from} replace />;

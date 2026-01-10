@@ -48,7 +48,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         setQuestions(response.data.data.questions);
       }
     } catch (error) {
-      console.error("Failed to load questions:", error);
+      // console.error("Failed to load questions:", error);
       toast.error("Failed to load questions");
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         setStats(response.data.data);
       }
     } catch (error) {
-      console.error("Failed to load stats:", error);
+      // console.error("Failed to load stats:", error);
     }
   };
 
@@ -77,7 +77,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.error(response.data.error || "Failed to add question");
       }
     } catch (error) {
-      console.error("Failed to create question:", error);
+      // console.error("Failed to create question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {
@@ -100,7 +100,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.error(response.data.error || "Failed to update question");
       }
     } catch (error) {
-      console.error("Failed to update question:", error);
+      // console.error("Failed to update question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {
@@ -124,7 +124,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.error(response.data.error || "Failed to delete question");
       }
     } catch (error) {
-      console.error("Failed to delete question:", error);
+      // console.error("Failed to delete question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {
@@ -144,7 +144,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.error(response.data.error || "Failed to import questions");
       }
     } catch (error) {
-      console.error("Failed to import questions:", error);
+      // console.error("Failed to import questions:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {

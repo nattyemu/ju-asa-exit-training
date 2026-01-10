@@ -11,9 +11,9 @@ import { autoSubmitExam } from "../controllers/submissionController.js";
 export const runAutoSubmissionCheck = async () => {
   try {
     const now = new Date();
-    console.log(
-      `🔄 [AUTO-CHECK] Running auto-submission check at ${now.toISOString()}`
-    );
+    // console.log(
+    //   `🔄 [AUTO-CHECK] Running auto-submission check at ${now.toISOString()}`
+    // );
 
     // Find active sessions with answer count
     const activeSessions = await db
@@ -28,9 +28,9 @@ export const runAutoSubmissionCheck = async () => {
       .where(and(isNull(studentExams.submittedAt), eq(exams.isActive, true)))
       .groupBy(studentExams.id);
 
-    console.log(
-      `📊 [AUTO-CHECK] Found ${activeSessions.length} active sessions`
-    );
+    // console.log(
+    //   `📊 [AUTO-CHECK] Found ${activeSessions.length} active sessions`
+    // );
 
     const results = [];
 
@@ -52,14 +52,14 @@ export const runAutoSubmissionCheck = async () => {
       const abandoned = now - updatedAt > 24 * 60 * 60 * 1000; // 24 hours
 
       if (durationExpired || deadlinePassed || abandoned) {
-        console.log(`🚨 [AUTO-CHECK] Processing session ${session.id}:`, {
-          durationExpired,
-          deadlinePassed,
-          abandoned,
-          studentId: session.studentId,
-          examId: exam.id,
-          answerCount,
-        });
+        // console.log(`🚨 [AUTO-CHECK] Processing session ${session.id}:`, {
+        //   durationExpired,
+        //   deadlinePassed,
+        //   abandoned,
+        //   studentId: session.studentId,
+        //   examId: exam.id,
+        //   answerCount,
+        // });
 
         if (answerCount > 0) {
           // Has answers → Auto-submit with scoring
@@ -115,9 +115,9 @@ export const runAutoSubmissionCheck = async () => {
       (r) => r.action === "deleted_empty" && r.success
     ).length;
 
-    console.log(
-      `✅ [AUTO-CHECK] Completed: ${autoSubmitted} auto-submitted, ${deleted} deleted`
-    );
+    // console.log(
+    //   `✅ [AUTO-CHECK] Completed: ${autoSubmitted} auto-submitted, ${deleted} deleted`
+    // );
 
     return {
       success: true,
@@ -127,7 +127,7 @@ export const runAutoSubmissionCheck = async () => {
       results,
     };
   } catch (error) {
-    console.error("❌ [AUTO-CHECK] Error:", error);
+    // console.error("❌ [AUTO-CHECK] Error:", error);
     return {
       success: false,
       message: "Auto-submission check failed",
@@ -152,9 +152,8 @@ export const setupAutoSubmissionCron = () => {
   
   console.log('⏰ Auto-submission cron job scheduled: every minute');
   */
-
   // For now, just export the function
-  console.log(
-    "⏰ Auto-submission job ready. Call runAutoSubmissionCheck() periodically."
-  );
+  // console.log(
+  //   "⏰ Auto-submission job ready. Call runAutoSubmissionCheck() periodically."
+  // );
 };

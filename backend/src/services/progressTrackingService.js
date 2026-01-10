@@ -129,7 +129,7 @@ export const getEnhancedStudentProgress = async (
       },
     };
   } catch (error) {
-    console.error("Progress tracking error:", error);
+    // console.error("Progress tracking error:", error);
     return {
       success: false,
       error: error.message,
@@ -198,7 +198,7 @@ export const getLeaderboard = async (timeRange = "month", limit = 10) => {
       },
     };
   } catch (error) {
-    console.error("Leaderboard error:", error);
+    // console.error("Leaderboard error:", error);
     return {
       success: false,
       error: error.message,
@@ -253,7 +253,7 @@ export const getStudyTimeAnalytics = async (studentId) => {
       },
     };
   } catch (error) {
-    console.error("Study time analytics error:", error);
+    // console.error("Study time analytics error:", error);
     return {
       success: false,
       error: error.message,

@@ -194,7 +194,7 @@ export const BulkImportModal = ({ examId, onClose, onSuccess }) => {
 
       onClose();
     } catch (error) {
-      console.error("Import error:", error);
+      // console.error("Import error:", error);
       toast.error(error.message || "Failed to import questions");
     } finally {
       setIsSubmitting(false);

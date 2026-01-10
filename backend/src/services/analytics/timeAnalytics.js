@@ -109,7 +109,7 @@ export const getTimeAnalytics = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("Time analytics error:", error);
+    // console.error("Time analytics error:", error);
     return {
       success: false,
       error: error.message,
@@ -160,7 +160,7 @@ export const getSubmissionPattern = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("Submission pattern error:", error);
+    // console.error("Submission pattern error:", error);
     return {
       success: false,
       error: error.message,

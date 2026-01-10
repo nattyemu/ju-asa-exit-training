@@ -127,7 +127,7 @@ export const exportExamResults = async (examId, format = "csv") => {
       };
     }
   } catch (error) {
-    console.error("Export results error:", error);
+    // console.error("Export results error:", error);
     return {
       success: false,
       error: error.message || "Failed to export exam results",
@@ -264,7 +264,7 @@ export const exportQuestionAnalytics = async (examId, format = "csv") => {
       };
     }
   } catch (error) {
-    console.error("Export question analytics error:", error);
+    // console.error("Export question analytics error:", error);
     return {
       success: false,
       error: error.message || "Failed to export question analytics",
@@ -392,7 +392,7 @@ export const exportDepartmentPerformance = async (
       };
     }
   } catch (error) {
-    console.error("Export department performance error:", error);
+    // console.error("Export department performance error:", error);
     return {
       success: false,
       error: error.message || "Failed to export department performance",
@@ -506,7 +506,7 @@ export const exportTimeAnalytics = async (
       };
     }
   } catch (error) {
-    console.error("Export time analytics error:", error);
+    // console.error("Export time analytics error:", error);
     return {
       success: false,
       error: error.message || "Failed to export time analytics",
@@ -618,7 +618,7 @@ export const exportStudentPerformance = async (studentId, format = "csv") => {
       };
     }
   } catch (error) {
-    console.error("Export student performance error:", error);
+    // console.error("Export student performance error:", error);
     return {
       success: false,
       error: error.message || "Failed to export student performance",
@@ -866,7 +866,7 @@ export const exportCompleteReport = async (
       };
     }
   } catch (error) {
-    console.error("Export complete report error:", error);
+    // console.error("Export complete report error:", error);
     return {
       success: false,
       error: error.message || "Failed to export complete report",

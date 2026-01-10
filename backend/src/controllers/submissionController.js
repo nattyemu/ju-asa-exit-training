@@ -301,7 +301,7 @@ export const submitExam = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Submit exam error:", error);
+    // console.error("Submit exam error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       const [existingResult] = await db
@@ -409,7 +409,7 @@ export const autoSubmitExam = async (studentExamId) => {
 
     return { success: true, message: "Exam auto-submitted successfully" };
   } catch (error) {
-    console.error("Auto-submit exam error:", error);
+    // console.error("Auto-submit exam error:", error);
     return { success: false, message: "Failed to auto-submit exam" };
   }
 };
@@ -518,7 +518,7 @@ export const checkAutoSubmitConditions = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Check auto-submit conditions error:", error);
+    // console.error("Check auto-submit conditions error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to check auto-submit conditions",

@@ -85,7 +85,7 @@ export const ExamGuard = ({ children }) => {
           // No active session, that's fine - we'll create one in ExamPage
         }
       } catch (error) {
-        console.error("Exam check error:", error);
+        // console.error("Exam check error:", error);
 
         // Handle specific errors
         if (error.response?.status === 404) {

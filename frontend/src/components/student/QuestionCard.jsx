@@ -53,24 +53,24 @@ export const QuestionCard = ({
   const handleOptionClick = (optionKey) => {
     if (timeExpired || isSubmitting || !onAnswerSelect) return;
 
-    console.log("🖱️ QuestionCard - Option clicked:", {
-      clickedKey: optionKey,
-      questionId: question.id,
-      optionMapping: question.optionMapping,
-      shuffledOptions: question.shuffledOptions,
-    });
+    // console.log("🖱️ QuestionCard - Option clicked:", {
+    //   clickedKey: optionKey,
+    //   questionId: question.id,
+    //   optionMapping: question.optionMapping,
+    //   shuffledOptions: question.shuffledOptions,
+    // });
 
     // Map to original answer before sending
     let answerToSend = optionKey;
     if (question.optionMapping) {
       const before = answerToSend;
       answerToSend = mapAnswerToOriginal(optionKey, question.optionMapping);
-      console.log("🗺️ Mapped answer:", { from: before, to: answerToSend });
+      // console.log("🗺️ Mapped answer:", { from: before, to: answerToSend });
     } else {
-      console.log("⚠️ No optionMapping found on question!");
+      // console.log("⚠️ No optionMapping found on question!");
     }
 
-    console.log("📤 Sending to parent:", answerToSend);
+    // console.log("📤 Sending to parent:", answerToSend);
     onAnswerSelect(answerToSend);
   };
 

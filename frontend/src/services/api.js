@@ -62,7 +62,7 @@ api.interceptors.response.use(
     // IGNORE "No active exam session found" - this is NOT an error
     // It's just informational since students often don't have active sessions
     if (status === 404 && message.includes("No active exam session found")) {
-      console.log("No active exam session - this is normal");
+      // console.log("No active exam session - this is normal");
       return Promise.reject(error); // Reject but don't show toast
     }
 
@@ -79,7 +79,7 @@ api.interceptors.response.use(
       ];
 
       if (ignore404Messages.some((ignoreMsg) => message.includes(ignoreMsg))) {
-        console.log(`Ignoring 404: ${message}`);
+        // console.log(`Ignoring 404: ${message}`);
         return Promise.reject(error);
       }
     }
@@ -146,7 +146,7 @@ api.interceptors.response.use(
 
     // Handle 500+ Server errors
     if (status >= 500) {
-      console.error("Server error:", error.response?.data);
+      // console.error("Server error:", error.response?.data);
       toast.error("Server error. Please try again later.");
       return Promise.reject(error);
     }

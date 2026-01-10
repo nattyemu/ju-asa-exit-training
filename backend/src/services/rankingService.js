@@ -40,7 +40,7 @@ export const calculateRank = async (
 
     return allResults.length + 1; // If not found
   } catch (error) {
-    console.error("Error calculating rank:", error);
+    // console.error("Error calculating rank:", error);
     throw new Error("Failed to calculate ranking");
   }
 };
@@ -81,7 +81,7 @@ export const recalculateExamRankings = async (examId) => {
       message: `Recalculated rankings for ${allResults.length} results`,
     };
   } catch (error) {
-    console.error("Error recalculating rankings:", error);
+    // console.error("Error recalculating rankings:", error);
     throw new Error("Failed to recalculate rankings");
   }
 };
@@ -114,7 +114,7 @@ export const getTopRankings = async (examId, limit = 10) => {
 
     return Array.isArray(rankings) ? rankings : [];
   } catch (error) {
-    console.error("Error getting top rankings:", error);
+    // console.error("Error getting top rankings:", error);
     return [];
   }
 };

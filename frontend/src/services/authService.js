@@ -27,7 +27,7 @@ export const authService = {
         data: null,
       };
     } catch (error) {
-      console.error("authService.login error:", error);
+      // console.error("authService.login error:", error);
 
       return {
         success: false,
@@ -45,9 +45,9 @@ export const authService = {
       // Remove authorization header
       delete api.defaults.headers.common["Authorization"];
 
-      console.log("authService.logout completed");
+      // console.log("authService.logout completed");
     } catch (error) {
-      console.error("authService.logout error:", error);
+      // console.error("authService.logout error:", error);
     }
   },
 
@@ -56,7 +56,7 @@ export const authService = {
       const userStr = localStorage.getItem("user");
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error("authService.getCurrentUser error:", error);
+      // console.error("authService.getCurrentUser error:", error);
       return null;
     }
   },
@@ -67,7 +67,7 @@ export const authService = {
       const user = localStorage.getItem("user");
       return !!(token && user);
     } catch (error) {
-      console.error("authService.isAuthenticated error:", error);
+      // console.error("authService.isAuthenticated error:", error);
       return false;
     }
   },
@@ -77,7 +77,7 @@ export const authService = {
       const user = authService.getCurrentUser();
       return user && user.role === "ADMIN";
     } catch (error) {
-      console.error("authService.isAdmin error:", error);
+      // console.error("authService.isAdmin error:", error);
       return false;
     }
   },
@@ -87,7 +87,7 @@ export const authService = {
       const user = authService.getCurrentUser();
       return user && user.role === "STUDENT";
     } catch (error) {
-      console.error("authService.isStudent error:", error);
+      // console.error("authService.isStudent error:", error);
       return false;
     }
   },
@@ -103,7 +103,7 @@ export const authService = {
       const response = await api.get("/auth/validate");
       return response.data;
     } catch (error) {
-      console.error("authService.validateToken error:", error);
+      // console.error("authService.validateToken error:", error);
       return {
         success: false,
         message: error.response?.data?.message || "Token validation failed",
@@ -134,7 +134,7 @@ export const authService = {
 
       return { success: false, message: response.data.message };
     } catch (error) {
-      console.error("authService.refreshToken error:", error);
+      // console.error("authService.refreshToken error:", error);
       return {
         success: false,
         message: error.response?.data?.message || "Token refresh failed",

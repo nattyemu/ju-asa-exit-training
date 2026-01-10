@@ -130,7 +130,7 @@ export const EditUserModal = ({ user, onClose, onSubmit }) => {
 
       await onSubmit(updateData);
     } catch (error) {
-      console.error("Failed to update user:", error);
+      // console.error("Failed to update user:", error);
       toast.error(error.response?.data?.message || "Failed to update user");
     } finally {
       setIsSubmitting(false);

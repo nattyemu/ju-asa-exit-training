@@ -39,7 +39,7 @@ export const validateSessionOwnership = async (req, res, next) => {
     req.session = session;
     next();
   } catch (error) {
-    console.error("Session validation error:", error);
+    // console.error("Session validation error:", error);
 
     return res.status(500).json({
       success: false,
@@ -84,7 +84,7 @@ export const validateSessionIdParam = async (req, res, next) => {
     req.session = session;
     next();
   } catch (error) {
-    console.error("Session ID param validation error:", error);
+    // console.error("Session ID param validation error:", error);
 
     return res.status(500).json({
       success: false,
@@ -133,7 +133,7 @@ export const validateActiveSession = async (req, res, next) => {
     req.exam = exam;
     next();
   } catch (error) {
-    console.error("Active session validation error:", error);
+    // console.error("Active session validation error:", error);
 
     return res.status(500).json({
       success: false,
@@ -213,7 +213,7 @@ export const validateExamStart = async (req, res, next) => {
     req.exam = exam;
     next();
   } catch (error) {
-    console.error("Exam start validation error:", error);
+    // console.error("Exam start validation error:", error);
 
     return res.status(500).json({
       success: false,

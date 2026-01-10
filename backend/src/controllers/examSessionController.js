@@ -57,7 +57,7 @@ export const startExamSession = async (req, res) => {
       // Check if it's for the same exam
       if (activeSession.examId === examId) {
         // Same exam - will be handled below in transaction
-        console.log("Active session found for same exam");
+        // console.log("Active session found for same exam");
       } else {
         // Different exam - block creation
         return res.status(400).json({
@@ -100,12 +100,12 @@ export const startExamSession = async (req, res) => {
       });
     }
 
-    console.log(
-      "🔄 Checking for existing sessions - userId:",
-      userId,
-      "examId:",
-      examId
-    );
+    // console.log(
+    //   "🔄 Checking for existing sessions - userId:",
+    //   userId,
+    //   "examId:",
+    //   examId
+    // );
 
     // Use transaction to prevent race conditions
     const result = await db.transaction(async (tx) => {
@@ -121,7 +121,7 @@ export const startExamSession = async (req, res) => {
           )
         );
 
-      console.log("📋 Found existing sessions:", existingSessions.length);
+      // console.log("📋 Found existing sessions:", existingSessions.length);
 
       if (existingSessions.length > 0) {
         const activeSession = existingSessions.find(
@@ -132,7 +132,7 @@ export const startExamSession = async (req, res) => {
         );
 
         if (activeSession) {
-          console.log("🔄 Resuming active session:", activeSession.id);
+          // console.log("🔄 Resuming active session:", activeSession.id);
 
           // Has active session - return it
           const remainingTime = calculateRemainingTime(
@@ -194,7 +194,7 @@ export const startExamSession = async (req, res) => {
           };
         } else if (completedSession) {
           // Already completed - cannot retake
-          console.log("⛔ Exam already completed");
+          // console.log("⛔ Exam already completed");
           return {
             status: 400,
             data: {
@@ -205,7 +205,7 @@ export const startExamSession = async (req, res) => {
         }
       }
 
-      console.log("🚀 Creating new exam session");
+      // console.log("🚀 Creating new exam session");
       // Create new exam session
       const [newSession] = await tx.insert(studentExams).values({
         studentId: userId,
@@ -217,7 +217,7 @@ export const startExamSession = async (req, res) => {
       });
 
       const sessionId = newSession.insertId;
-      console.log("✅ Created new session ID:", sessionId);
+      // console.log("✅ Created new session ID:", sessionId);
 
       // Get exam questions (without correct answers)
       const examQuestions = await tx
@@ -272,14 +272,14 @@ export const startExamSession = async (req, res) => {
     // Send the response
     return res.status(result.status).json(result.data);
   } catch (error) {
-    console.error("❌ Start exam session error:", error);
+    // console.error("❌ Start exam session error:", error);
 
     // Handle specific database errors
     if (error.code === "ER_DUP_ENTRY") {
       // This should rarely happen now with transaction, but keep as safety
-      console.log(
-        "⚠️ Duplicate entry detected, trying to load existing session"
-      );
+      // console.log(
+      //   "⚠️ Duplicate entry detected, trying to load existing session"
+      // );
 
       try {
         // Try to get the existing session
@@ -349,7 +349,7 @@ export const startExamSession = async (req, res) => {
           }
         }
       } catch (fallbackError) {
-        console.error("Fallback error:", fallbackError);
+        // console.error("Fallback error:", fallbackError);
       }
 
       return res.status(409).json({
@@ -471,7 +471,7 @@ export const getActiveSession = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get active session error:", error);
+    // console.error("Get active session error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve active session",
@@ -548,7 +548,7 @@ export const getSessionDetails = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get session details error:", error);
+    // console.error("Get session details error:", error);
 
     return res.status(500).json({
       success: false,
@@ -652,7 +652,7 @@ export const saveAnswer = async (req, res) => {
           });
         }
       } catch (autoSubmitError) {
-        console.error("Auto-submit error:", autoSubmitError);
+        // console.error("Auto-submit error:", autoSubmitError);
         return res.status(400).json({
           success: false,
           message: "Exam time has expired. Auto-submission failed.",
@@ -718,7 +718,7 @@ export const saveAnswer = async (req, res) => {
       message: isAutosave ? "Answer auto-saved" : "Answer saved successfully",
     });
   } catch (error) {
-    console.error("Save answer error:", error);
+    // console.error("Save answer error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -880,7 +880,7 @@ export const saveMultipleAnswers = async (req, res) => {
       message: `${answersData.length} answers saved successfully`,
     });
   } catch (error) {
-    console.error("Save multiple answers error:", error);
+    // console.error("Save multiple answers error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -1017,7 +1017,7 @@ export const resumeSession = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Resume session error:", error);
+    // console.error("Resume session error:", error);
 
     return res.status(500).json({
       success: false,
@@ -1098,7 +1098,7 @@ export const checkSessionStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Check session status error:", error);
+    // console.error("Check session status error:", error);
 
     return res.status(500).json({
       success: false,
@@ -1174,7 +1174,7 @@ export const cancelSession = async (req, res) => {
       message: "Exam session cancelled successfully",
     });
   } catch (error) {
-    console.error("Cancel session error:", error);
+    // console.error("Cancel session error:", error);
 
     return res.status(500).json({
       success: false,

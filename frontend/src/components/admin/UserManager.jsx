@@ -75,7 +75,7 @@ export const UserManager = () => {
         throw new Error("Invalid response format");
       }
     } catch (error) {
-      console.error("Failed to load users:", error);
+      // console.error("Failed to load users:", error);
       toast.error(error.response?.data?.message || "Failed to load users");
       setUsers([]);
       setPagination({
@@ -96,7 +96,7 @@ export const UserManager = () => {
       loadUsers();
       setShowRegisterModal(false);
     } catch (error) {
-      console.error("Failed to register student:", error);
+      // console.error("Failed to register student:", error);
       toast.error(
         error.response?.data?.message || "Failed to register student"
       );
@@ -114,7 +114,7 @@ export const UserManager = () => {
       setShowChangePasswordModal(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error("Failed to change password:", error);
+      // console.error("Failed to change password:", error);
       toast.error(error.response?.data?.message || "Failed to change password");
     }
   };
@@ -150,7 +150,7 @@ export const UserManager = () => {
       setSelectedUser(null);
       setPasswordAction(null);
     } catch (error) {
-      console.error("Failed to update role:", error);
+      // console.error("Failed to update role:", error);
 
       throw error; // Re-throw to let modal handle error
     }
@@ -163,7 +163,7 @@ export const UserManager = () => {
       toast.success(`User ${action} successfully`);
       loadUsers();
     } catch (error) {
-      console.error("Failed to toggle status:", error);
+      // console.error("Failed to toggle status:", error);
       toast.error(
         error.response?.data?.message || "Failed to update user status"
       );
@@ -183,7 +183,7 @@ export const UserManager = () => {
       setShowEditModal(false);
       setEditingUser(null);
     } catch (error) {
-      console.error("Failed to update user:", error);
+      // console.error("Failed to update user:", error);
       toast.error(
         error.response?.data?.message || "Failed to update user profile"
       );

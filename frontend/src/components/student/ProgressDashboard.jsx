@@ -104,7 +104,7 @@ export const ProgressDashboard = () => {
         progressRes.value?.data?.success
       ) {
         const progressData = progressRes.value.data.data;
-        console.log("Progress Data:", progressData);
+        // console.log("Progress Data:", progressData);
         setProgress(progressData);
 
         // Extract completed exams for dropdown
@@ -195,7 +195,7 @@ export const ProgressDashboard = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to load progress data:", error);
+      // console.error("Failed to load progress data:", error);
       toast.error("Failed to load progress data");
     } finally {
       setLoading(false);
@@ -223,7 +223,7 @@ export const ProgressDashboard = () => {
         });
       }
     } catch (error) {
-      console.error(`Failed to load rankings for exam ${examId}:`, error);
+      // console.error(`Failed to load rankings for exam ${examId}:`, error);
       toast.error("Failed to load rankings");
       setSelectedExamRankings({
         rankings: [],

@@ -101,7 +101,7 @@ export const getExamStatistics = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("Exam analytics error:", error);
+    // console.error("Exam analytics error:", error);
     return {
       success: false,
       error: error.message,
@@ -182,7 +182,7 @@ export const getScoreDistribution = async (examId, bins = 5) => {
       },
     };
   } catch (error) {
-    console.error("Score distribution error:", error);
+    // console.error("Score distribution error:", error);
     return {
       success: false,
       error: error.message,

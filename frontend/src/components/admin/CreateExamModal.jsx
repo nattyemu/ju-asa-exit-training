@@ -80,7 +80,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
 
       await onSubmit(dataToSubmit);
     } catch (error) {
-      console.error("Submission failed:", error);
+      // console.error("Submission failed:", error);
       // Error will be handled by parent component with toast
     } finally {
       setIsSubmitting(false);

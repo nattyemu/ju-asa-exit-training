@@ -9,7 +9,7 @@ const ensureUploadDirs = () => {
     const dir = path.join(process.cwd(), "public", "img", type);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
-      console.log(`Created directory: ${dir}`);
+      // console.log(`Created directory: ${dir}`);
     }
   });
 };

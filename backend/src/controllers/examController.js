@@ -44,7 +44,7 @@ export const createExam = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Create exam error:", error);
+    // console.error("Create exam error:", error);
 
     // Handle specific database errors
     if (error.code === "ER_DUP_ENTRY") {
@@ -111,7 +111,7 @@ export const getAllExams = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get all exams error:", error);
+    // console.error("Get all exams error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch exams",
@@ -238,7 +238,7 @@ export const getAvailableExams = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get available exams error:", error);
+    // console.error("Get available exams error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch available exams",
@@ -271,7 +271,7 @@ export const getExamById = async (req, res) => {
       data: exam,
     });
   } catch (error) {
-    console.error("Get exam by ID error:", error);
+    // console.error("Get exam by ID error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch exam details",
@@ -342,7 +342,7 @@ export const updateExam = async (req, res) => {
       data: updatedExam,
     });
   } catch (error) {
-    console.error("Update exam error:", error);
+    // console.error("Update exam error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -427,7 +427,7 @@ export const updateExamStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Update exam status error:", error);
+    // console.error("Update exam status error:", error);
 
     // Handle foreign key constraint errors
     if (
@@ -492,7 +492,7 @@ export const getAdminDashboardStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get admin dashboard stats error:", error);
+    // console.error("Get admin dashboard stats error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch admin dashboard stats",

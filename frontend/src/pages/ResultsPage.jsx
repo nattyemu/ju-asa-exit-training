@@ -56,7 +56,7 @@ export const ResultsPage = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to load results:", error);
+      // console.error("Failed to load results:", error);
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export const ResultsPage = () => {
                 ),
               };
             } catch (error) {
-              console.error("Error shuffling answer:", error);
+              // console.error("Error shuffling answer:", error);
               return {
                 ...answer,
                 shuffledOptions: [
@@ -144,7 +144,7 @@ export const ResultsPage = () => {
         loadRankings(examId);
       }
     } catch (error) {
-      console.error("Failed to load result from API:", error);
+      // console.error("Failed to load result from API:", error);
 
       if (error.response?.status === 404) {
         if (examData && resultData) {
@@ -214,7 +214,7 @@ export const ResultsPage = () => {
         setRankings(response.data.data.rankings);
       }
     } catch (error) {
-      console.error("Failed to load rankings:", error);
+      // console.error("Failed to load rankings:", error);
     }
   };
 

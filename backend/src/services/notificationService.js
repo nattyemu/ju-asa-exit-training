@@ -149,7 +149,7 @@ export const sendExamReminders = async (examId = null) => {
             sentAt: new Date(),
           });
         } catch (emailError) {
-          console.error(`Failed to send email: ${emailError.message}`);
+          // console.error(`Failed to send email: ${emailError.message}`);
           results.push({
             examId: exam.id,
             studentId: student.userId,
@@ -183,7 +183,7 @@ export const sendExamReminders = async (examId = null) => {
       },
     };
   } catch (error) {
-    console.error("❌ Exam reminders error:", error);
+    // console.error("❌ Exam reminders error:", error);
     return {
       success: false,
       error: error.message,
@@ -279,7 +279,7 @@ export const sendUnstartedExamReminders = async (examId) => {
       },
     };
   } catch (error) {
-    console.error("❌ sendUnstartedExamReminders error:", error);
+    // console.error("❌ sendUnstartedExamReminders error:", error);
     return {
       success: false,
       message: error.message,
@@ -382,7 +382,7 @@ export const getUnstartedExamStats = async () => {
       },
     };
   } catch (error) {
-    console.error("❌ Get unstarted exam stats error:", error);
+    // console.error("❌ Get unstarted exam stats error:", error);
     return {
       success: false,
       error: error.message,
@@ -455,10 +455,10 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
           sentAt: new Date(),
         });
       } catch (emailError) {
-        console.error(
-          `Failed to send announcement to ${user.email}:`,
-          emailError
-        );
+        // console.error(
+        //   `Failed to send announcement to ${user.email}:`,
+        //   emailError
+        // );
         results.push({
           userId: user.userId,
           email: user.email,
@@ -486,7 +486,7 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
       },
     };
   } catch (error) {
-    console.error("System announcement error:", error);
+    // console.error("System announcement error:", error);
     return {
       success: false,
       error: error.message,

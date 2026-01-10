@@ -54,7 +54,7 @@ export const PasswordVerificationModal = ({
       // If successful, close modal
       onClose();
     } catch (error) {
-      console.error("Role change failed:", error);
+      // console.error("Role change failed:", error);
       setError(error.response?.data?.message || "Failed to update role");
     } finally {
       setIsSubmitting(false);

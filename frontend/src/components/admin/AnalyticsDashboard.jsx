@@ -79,7 +79,7 @@ export const AnalyticsDashboard = () => {
         setExams(response.data.data.exams || []);
       }
     } catch (error) {
-      console.error("Failed to load exams:", error);
+      // console.error("Failed to load exams:", error);
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export const AnalyticsDashboard = () => {
         });
       }
     } catch (error) {
-      console.error(`Failed to load rankings for exam ${examId}:`, error);
+      // console.error(`Failed to load rankings for exam ${examId}:`, error);
       // Still try to get title from exams list
       const selectedExamDetails = exams.find((e) => e.id === examId);
       setExamRankings({
@@ -183,7 +183,7 @@ export const AnalyticsDashboard = () => {
           : [],
       });
     } catch (error) {
-      console.error("Failed to load analytics data:", error);
+      // console.error("Failed to load analytics data:", error);
     } finally {
       setLoading(false);
     }
@@ -332,7 +332,7 @@ export const AnalyticsDashboard = () => {
       setShowExportModal(false);
       setShowInfoModal(true);
     } catch (error) {
-      console.error("Export failed:", error);
+      // console.error("Export failed:", error);
       setInfoModalTitle("Export Failed");
       setInfoModalMessage(error.message || "Export failed. Please try again.");
       setShowInfoModal(true);

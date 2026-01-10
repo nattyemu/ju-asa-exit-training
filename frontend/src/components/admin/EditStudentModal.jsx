@@ -127,7 +127,7 @@ export const EditStudentModal = ({ user, onClose, onSubmit }) => {
 
       await onSubmit(submissionData);
     } catch (error) {
-      console.error("Failed to update user:", error);
+      // console.error("Failed to update user:", error);
       if (error.response?.data?.message) {
         setErrors({ general: error.response.data.message });
       }
