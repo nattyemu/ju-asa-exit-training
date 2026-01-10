@@ -393,9 +393,10 @@ export const getActiveSession = async (req, res) => {
       .limit(1);
 
     if (activeSessions.length === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: "No active exam session found",
+        data: null,
       });
     }
 
@@ -408,9 +409,10 @@ export const getActiveSession = async (req, res) => {
       .where(eq(exams.id, session.examId));
 
     if (!exam) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: "Exam not found",
+        data: null,
       });
     }
 
