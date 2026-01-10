@@ -1,4 +1,4 @@
-# JU-ASA Exit Training Platform
+# JU-ASA Exit exam Training Platform
 
 A comprehensive training platform that simulates the Ethiopian University Exit Exam experience, allowing students to practice with timed exams, receive instant results, and compare their performance with peers.
 
