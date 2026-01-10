@@ -305,9 +305,10 @@ export const ResultsPage = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-text-secondary" />
+                <span className="font-medium">Back</span>
               </button>
               <div>
                 <h1 className="text-xl font-bold text-text-primary">

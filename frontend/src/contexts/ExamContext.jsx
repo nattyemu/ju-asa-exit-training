@@ -179,10 +179,10 @@ export const ExamProvider = ({ children }) => {
   // Update the useEffect that loads on mount
   // useEffect(() => {
   //   if (user?.role === "STUDENT") {
-  console.log("🚀 ExamContext: User is student, loading session...");
+  // console.log("🚀 ExamContext: User is student, loading session...");
   //     loadActiveSession();
   //   } else {
-  console.log("👤 ExamContext: User is not student, clearing session");
+  // console.log("👤 ExamContext: User is not student, clearing session");
   //     clearExamState();
   //   }
   // }, [user]);
@@ -200,10 +200,10 @@ export const ExamProvider = ({ children }) => {
   // Update the useEffect that loads on mount
   // useEffect(() => {
   //   if (user?.role === "STUDENT") {
-  console.log("🚀 ExamContext: User is student, loading session...");
+  // console.log("🚀 ExamContext: User is student, loading session...");
   //     loadActiveSession();
   //   } else {
-  console.log("👤 ExamContext: User is not student, clearing session");
+  // console.log("👤 ExamContext: User is not student, clearing session");
   //     clearExamState();
   //   }
   // }, [user]);

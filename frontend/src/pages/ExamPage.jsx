@@ -620,14 +620,14 @@ export const ExamPage = () => {
                 disabled={examContextLoading}
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back to Dashboard
+                <span className="hidden sm:inline">Back</span>
               </button>
 
-              <div className="hidden md:block">
+              <div className="hidden md:flex flex-col">
                 <h1 className="text-lg font-bold text-text-primary">
                   {currentExam?.title || "Exam"}
                 </h1>
-                <p className="text-sm text-text-secondary">
+                <p className="text-sm text-text-secondary mt-1">
                   Question {currentQuestionIndex + 1} of {totalQuestions}
                 </p>
               </div>

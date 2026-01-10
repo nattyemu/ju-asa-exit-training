@@ -19,6 +19,7 @@ import {
   Crown,
   Medal,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { examService } from "../../services/examService";
 import { adminService } from "../../services/adminService";
@@ -437,13 +438,22 @@ export const ProgressDashboard = () => {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-text-primary">
-            My Progress Dashboard
-          </h2>
-          <p className="text-sm text-text-secondary">
-            Track performance, analyze strengths, and improve your scores
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-text-secondary hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="font-medium hidden sm:inline">Back</span>
+          </Link>
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-bold text-text-primary">
+              My Progress Dashboard
+            </h2>
+            <p className="text-sm text-text-secondary mt-1">
+              Track performance, analyze strengths, and improve your scores
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

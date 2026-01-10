@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Edit,
   XCircle,
+  Bell,
 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -494,13 +495,6 @@ export const Dashboard = () => {
                       <TrendingUp className="w-5 h-5 text-text-secondary" />
                       <span className="text-sm">My Progress</span>
                     </Link>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <Trophy className="w-5 h-5 text-text-secondary" />
-                      <span className="text-sm">My Results</span>
-                    </Link>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -524,6 +518,13 @@ export const Dashboard = () => {
                     >
                       <BookOpen className="w-5 h-5 text-text-secondary" />
                       <span className="text-sm">Exam Management</span>
+                    </Link>
+                    <Link
+                      to="/admin/notifications"
+                      className="flex items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Bell className="w-5 h-5 text-text-secondary" />
+                      <span className="text-sm">Notifications</span>
                     </Link>
                   </div>
                 )}
