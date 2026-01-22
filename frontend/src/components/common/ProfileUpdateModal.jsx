@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, User, Calendar, Loader2 } from "lucide-react";
+import { X, Upload, User, Calendar, Loader2, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { profileService } from "../../services/profileService";
 
@@ -15,9 +15,20 @@ const ProfileUpdateModal = ({
     year: "",
     profileImageUrl: "",
   });
+  const [errors, setErrors] = useState({
+    fullName: "",
+    year: "",
+    profileImageUrl: "",
+  });
+  const [touched, setTouched] = useState({
+    fullName: false,
+    year: false,
+    profileImageUrl: false,
+  });
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [yearOptions, setYearOptions] = useState([]);
+  const [isValid, setIsValid] = useState(false);
 
   // Generate dynamic year options: current year, year+1, year+2, year+3
   useEffect(() => {
@@ -30,6 +41,69 @@ const ProfileUpdateModal = ({
     ];
     setYearOptions(years);
   }, []);
+
+  // Validation rules based on backend schema
+  const validateField = (name, value, imageFile = null) => {
+    switch (name) {
+      case "fullName":
+        if (!value.trim()) return "Full name is required";
+        if (value.trim().length < 2)
+          return "Name must be at least 2 characters";
+        if (value.trim().length > 100)
+          return "Name must be less than 100 characters";
+        if (!/^[a-zA-Z\s.'-]+$/.test(value.trim()))
+          return "Name can only contain letters, spaces, and basic punctuation";
+        return "";
+
+      case "year":
+        if (!value) return "Graduation year is required";
+        const currentYear = new Date().getFullYear();
+        const yearNum = parseInt(value);
+        if (yearNum < currentYear) return "Year cannot be in the past";
+        if (yearNum > currentYear + 3)
+          return "Year must be within 3 years from now";
+        return "";
+
+      case "profileImageUrl":
+        // Only validate if there's a selected image
+        if (imageFile) {
+          if (!imageFile.type.match(/^image\/(jpeg|png|gif|jpg|webp)$/)) {
+            return "Only JPEG, PNG, GIF, and WebP images are allowed";
+          }
+          if (imageFile.size > 5 * 1024 * 1024) {
+            return "Image size must be less than 5MB";
+          }
+        }
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  // Validate entire form
+  const validateForm = () => {
+    const fullNameError = validateField("fullName", formData.fullName);
+    const yearError = validateField("year", formData.year);
+    const imageError = validateField(
+      "profileImageUrl",
+      formData.profileImageUrl,
+      selectedImage,
+    );
+
+    setErrors({
+      fullName: fullNameError,
+      year: yearError,
+      profileImageUrl: imageError,
+    });
+
+    return !fullNameError && !yearError && !imageError;
+  };
+
+  // Update validation on form change
+  useEffect(() => {
+    setIsValid(validateForm());
+  }, [formData, selectedImage]);
 
   // Initialize form with user data
   useEffect(() => {
@@ -47,11 +121,13 @@ const ProfileUpdateModal = ({
         userYear = yearOptions[0];
       }
 
-      setFormData({
+      const initialData = {
         fullName: userProfile.fullName || "",
         year: userYear,
         profileImageUrl: userProfile.profileImageUrl || "",
-      });
+      };
+
+      setFormData(initialData);
 
       if (userProfile.profileImageUrl) {
         const fullImageUrl = userProfile.profileImageUrl.startsWith("http")
@@ -63,6 +139,9 @@ const ProfileUpdateModal = ({
       } else {
         setImagePreview("");
       }
+
+      // Validate initial data
+      validateForm();
     }
   }, [userProfile, yearOptions]);
 
@@ -72,25 +151,62 @@ const ProfileUpdateModal = ({
       ...prev,
       [name]: value,
     }));
+
+    // Validate field if it's been touched
+    if (touched[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateField(name, value),
+      }));
+    }
+  };
+
+  const handleYearChange = (year) => {
+    setFormData((prev) => ({
+      ...prev,
+      year,
+    }));
+
+    if (touched.year) {
+      setErrors((prev) => ({
+        ...prev,
+        year: validateField("year", year),
+      }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    // Validate the blurred field
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, formData[name]),
+    }));
+  };
+
+  const handleYearBlur = () => {
+    setTouched((prev) => ({ ...prev, year: true }));
+    setErrors((prev) => ({
+      ...prev,
+      year: validateField("year", formData.year),
+    }));
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check file type
-    if (!file.type.match("image.*")) {
-      toast.error("Please select an image file (JPEG, PNG, GIF)");
-      return;
-    }
-
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
+    // Validate image
+    const imageError = validateField("profileImageUrl", "", file);
+    if (imageError) {
+      toast.error(imageError);
       return;
     }
 
     setSelectedImage(file);
+    setTouched((prev) => ({ ...prev, profileImageUrl: true }));
 
     // Create preview
     const reader = new FileReader();
@@ -98,6 +214,12 @@ const ProfileUpdateModal = ({
       setImagePreview(reader.result);
     };
     reader.readAsDataURL(file);
+
+    // Clear any previous image error
+    setErrors((prev) => ({
+      ...prev,
+      profileImageUrl: "",
+    }));
   };
 
   const removeImage = () => {
@@ -107,18 +229,29 @@ const ProfileUpdateModal = ({
       ...prev,
       profileImageUrl: "",
     }));
+    setTouched((prev) => ({ ...prev, profileImageUrl: true }));
+    setErrors((prev) => ({
+      ...prev,
+      profileImageUrl: "",
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.fullName.trim()) {
-      toast.error("Full name is required");
-      return;
-    }
+    // Mark all fields as touched
+    setTouched({
+      fullName: true,
+      year: true,
+      profileImageUrl: true,
+    });
 
-    if (!formData.year) {
-      toast.error("Please select your graduation year");
+    // Validate form
+    if (!validateForm()) {
+      const firstError = Object.values(errors).find((error) => error);
+      if (firstError) {
+        toast.error(firstError);
+      }
       return;
     }
 
@@ -134,19 +267,17 @@ const ProfileUpdateModal = ({
       // Send the data
       const updateData = {
         fullName: formData.fullName.trim(),
-        year: yearValue, // This will be currentYear, currentYear+1, etc.
+        year: yearValue,
         profileImageUrl: formData.profileImageUrl,
         // Use existing values or defaults
         department: userProfile?.department || "Computer Science",
         university: userProfile?.university || "JU University",
       };
 
-      // console.log("Updating profile with data:", updateData);
-
       // Call profile service
       const response = await profileService.updateProfile(
         updateData,
-        selectedImage
+        selectedImage,
       );
 
       if (response.success) {
@@ -157,14 +288,9 @@ const ProfileUpdateModal = ({
         toast.error(response.message || "Failed to update profile");
       }
     } catch (error) {
-      // console.error("Profile update error:", error);
-      // console.error("Error response:", error.response?.data);
-
-      // Show detailed error message
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.data?.errors?.length > 0) {
-        // Show validation errors
         error.response.data.errors.forEach((err) => {
           toast.error(`${err.field}: ${err.message}`);
         });
@@ -211,7 +337,7 @@ const ProfileUpdateModal = ({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} noValidate className="p-6">
             {/* Profile Image Upload */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -230,12 +356,19 @@ const ProfileUpdateModal = ({
                         type="button"
                         onClick={removeImage}
                         className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        disabled={loading}
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                    <div
+                      className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${
+                        errors.profileImageUrl && touched.profileImageUrl
+                          ? "border-red-300 bg-red-50"
+                          : "border-white bg-gradient-to-br from-gray-200 to-gray-300"
+                      }`}
+                    >
                       <User className="w-16 h-16 text-gray-400" />
                     </div>
                   )}
@@ -249,7 +382,13 @@ const ProfileUpdateModal = ({
                     className="hidden"
                     disabled={loading}
                   />
-                  <div className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2">
+                  <div
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                      loading
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-primary text-white hover:bg-primary-dark cursor-pointer"
+                    }`}
+                  >
                     <Upload className="w-4 h-4" />
                     <span>Choose Photo</span>
                   </div>
@@ -257,6 +396,12 @@ const ProfileUpdateModal = ({
                 <p className="text-xs text-gray-500 mt-2">
                   JPEG, PNG or GIF (Max 5MB)
                 </p>
+                {errors.profileImageUrl && touched.profileImageUrl && (
+                  <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.profileImageUrl}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -270,11 +415,22 @@ const ProfileUpdateModal = ({
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors"
+                onBlur={handleBlur}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors ${
+                  errors.fullName && touched.fullName
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300"
+                }`}
                 placeholder="Enter your full name"
                 required
                 disabled={loading}
               />
+              {errors.fullName && touched.fullName && (
+                <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errors.fullName}</span>
+                </div>
+              )}
             </div>
 
             {/* Year Selection */}
@@ -285,7 +441,7 @@ const ProfileUpdateModal = ({
                   Graduation Year
                 </div>
               </label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-3" onBlur={handleYearBlur}>
                 {yearOptions.map((year) => (
                   <label
                     key={year}
@@ -293,6 +449,10 @@ const ProfileUpdateModal = ({
                       formData.year === year
                         ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                         : "border-gray-300 hover:border-primary hover:bg-gray-50"
+                    } ${
+                      errors.year && touched.year
+                        ? "border-red-300 hover:border-red-400"
+                        : ""
                     }`}
                   >
                     <input
@@ -300,7 +460,7 @@ const ProfileUpdateModal = ({
                       name="year"
                       value={year}
                       checked={formData.year === year}
-                      onChange={handleInputChange}
+                      onChange={() => handleYearChange(year)}
                       className="sr-only"
                       disabled={loading}
                     />
@@ -312,6 +472,12 @@ const ProfileUpdateModal = ({
                   </label>
                 ))}
               </div>
+              {errors.year && touched.year && (
+                <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errors.year}</span>
+                </div>
+              )}
             </div>
 
             {/* Form Actions */}
@@ -319,15 +485,17 @@ const ProfileUpdateModal = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isValid || loading}
+                className={`flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2 ${
+                  !isValid ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 {loading ? (
                   <>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Calendar, Clock, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Calendar, Clock, Award, AlertCircle } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
     title: "",
     description: "",
     availableFrom: new Date(Date.now() + 60000), // 1 minute from now
-    availableUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    availableUntil: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 7 days from now
     duration: 180, // 3 hours in minutes
     totalQuestions: 100,
     passingScore: 50,
@@ -17,55 +17,139 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValid, setIsValid] = useState(false);
 
+  // Validation rules based on backend Zod schema
+  const validateField = (name, value) => {
+    switch (name) {
+      case "title":
+        if (!value.trim()) return "Title is required";
+        if (value.length < 3) return "Title must be at least 3 characters";
+        if (value.length > 255) return "Title cannot exceed 255 characters";
+        return "";
+
+      case "description":
+        if (value && value.length > 0 && value.length < 10) {
+          return "Description must be at least 10 characters";
+        }
+        return "";
+
+      case "availableFrom":
+        if (!value) return "Available from date is required";
+        const fromDate = new Date(value);
+        if (isNaN(fromDate.getTime())) {
+          return "Invalid date format";
+        }
+        const now = new Date();
+        // Allow dates up to 1 minute in the past to account for small time differences
+        if (fromDate <= new Date(now.getTime() - 60000)) {
+          return "Available from date must be in the future";
+        }
+        return "";
+
+      case "availableUntil":
+        if (!value) return "Available until date is required";
+        const untilDate = new Date(value);
+        if (isNaN(untilDate.getTime())) {
+          return "Invalid date format";
+        }
+        const fromDateToCompare = new Date(formData.availableFrom);
+        if (untilDate <= fromDateToCompare) {
+          return "Available until date must be after available from date";
+        }
+        return "";
+
+      case "duration":
+        if (!value && value !== 0) return "Duration is required";
+        const durationNum = parseInt(value);
+        if (isNaN(durationNum)) return "Duration must be a number";
+        if (!Number.isInteger(durationNum))
+          return "Duration must be an integer";
+        if (durationNum < 1) return "Duration must be at least 1 minute";
+        if (durationNum > 480)
+          return "Duration cannot exceed 480 minutes (8 hours)";
+        return "";
+
+      case "totalQuestions":
+        if (!value && value !== 0) return "Total questions is required";
+        const questionsNum = parseInt(value);
+        if (isNaN(questionsNum)) return "Total questions must be a number";
+        if (!Number.isInteger(questionsNum))
+          return "Total questions must be an integer";
+        if (questionsNum < 1) return "Exam must have at least 1 question";
+        if (questionsNum > 500)
+          return "Exam cannot have more than 500 questions";
+        return "";
+
+      case "passingScore":
+        if (!value && value !== 0) return "Passing score is required";
+        const scoreNum = parseFloat(value);
+        if (isNaN(scoreNum)) return "Passing score must be a number";
+        if (scoreNum < 0) return "Passing score cannot be negative";
+        if (scoreNum > 100) return "Passing score cannot exceed 100%";
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  // Validate entire form
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
-    } else if (formData.title.length < 3) {
-      newErrors.title = "Title must be at least 3 characters";
-    }
+    // Validate all fields
+    Object.keys(formData).forEach((field) => {
+      if (field !== "isActive") {
+        // Skip isActive for validation
+        const error = validateField(field, formData[field]);
+        if (error) {
+          newErrors[field] = error;
+        }
+      }
+    });
 
-    if (formData.description && formData.description.length < 10) {
-      newErrors.description = "Description must be at least 10 characters";
-    }
-
-    if (formData.duration <= 0) {
-      newErrors.duration = "Duration must be positive";
-    } else if (formData.duration > 480) {
-      newErrors.duration = "Duration cannot exceed 480 minutes (8 hours)";
-    }
-
-    if (formData.totalQuestions <= 0) {
-      newErrors.totalQuestions = "Questions must be positive";
-    } else if (formData.totalQuestions > 500) {
-      newErrors.totalQuestions = "Exam cannot have more than 500 questions";
-    }
-
-    if (formData.passingScore < 0 || formData.passingScore > 100) {
-      newErrors.passingScore = "Passing score must be between 0% and 100%";
-    }
-
-    const now = new Date();
-    if (formData.availableFrom <= now) {
-      newErrors.availableFrom = "Start date must be in the future";
-    }
-
-    if (formData.availableUntil <= formData.availableFrom) {
-      newErrors.availableUntil = "End date must be after start date";
+    // Additional validation for date comparison
+    const fromDate = new Date(formData.availableFrom);
+    const untilDate = new Date(formData.availableUntil);
+    if (
+      !newErrors.availableFrom &&
+      !newErrors.availableUntil &&
+      untilDate <= fromDate
+    ) {
+      newErrors.availableUntil =
+        "Available until date must be after available from date";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Update validation on form change
+  useEffect(() => {
+    const formIsValid = validateForm();
+    setIsValid(formIsValid);
+  }, [formData]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Mark all fields as touched
+    const allTouched = {};
+    Object.keys(formData).forEach((field) => {
+      if (field !== "isActive") {
+        allTouched[field] = true;
+      }
+    });
+    setTouched(allTouched);
+
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
+      const firstError = Object.values(errors).find((error) => error);
+      if (firstError) {
+        toast.error(firstError);
+      }
       return;
     }
 
@@ -80,7 +164,6 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
 
       await onSubmit(dataToSubmit);
     } catch (error) {
-      // console.error("Submission failed:", error);
       // Error will be handled by parent component with toast
     } finally {
       setIsSubmitting(false);
@@ -89,8 +172,38 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+
+    // Validate field if it's been touched
+    if (touched[field]) {
+      const error = validateField(field, value);
+      setErrors((prev) => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+
+    // Validate the blurred field
+    const error = validateField(field, formData[field]);
+    setErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  const handleDateChange = (field, date) => {
+    setFormData((prev) => ({ ...prev, [field]: date }));
+
+    // Validate date field if it's been touched
+    if (touched[field]) {
+      const error = validateField(field, date);
+      setErrors((prev) => ({ ...prev, [field]: error }));
+    }
+
+    // If changing availableFrom, also validate availableUntil
+    if (field === "availableFrom" && touched.availableUntil) {
+      const untilError = validateField(
+        "availableUntil",
+        formData.availableUntil,
+      );
+      setErrors((prev) => ({ ...prev, availableUntil: untilError }));
     }
   };
 
@@ -111,6 +224,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isSubmitting}
             >
               <X className="w-5 h-5 text-text-secondary" />
             </button>
@@ -118,7 +232,7 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} noValidate className="p-6">
           <div className="space-y-6">
             {/* Title & Description */}
             <div>
@@ -129,13 +243,19 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                 type="text"
                 value={formData.title}
                 onChange={(e) => handleChange("title", e.target.value)}
+                onBlur={() => handleBlur("title")}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.title ? "border-red-300" : "border-border"
+                  errors.title && touched.title
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                    : "border-border"
                 }`}
                 placeholder="e.g., Ethiopian Exit Exam Practice 2026"
               />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+              {errors.title && touched.title && (
+                <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errors.title}</span>
+                </div>
               )}
             </div>
 
@@ -146,19 +266,23 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
               <textarea
                 value={formData.description}
                 onChange={(e) => handleChange("description", e.target.value)}
+                onBlur={() => handleBlur("description")}
                 rows={3}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.description ? "border-red-300" : "border-border"
+                  errors.description && touched.description
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                    : "border-border"
                 }`}
                 placeholder="Brief description of the exam (at least 10 characters if provided)..."
               />
               <p className="mt-1 text-xs text-text-secondary">
                 Leave empty or provide at least 10 characters
               </p>
-              {errors.description && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.description}
-                </p>
+              {errors.description && touched.description && (
+                <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errors.description}</span>
+                </div>
               )}
             </div>
 
@@ -177,20 +301,24 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   </div>
                   <DatePicker
                     selected={formData.availableFrom}
-                    onChange={(date) => handleChange("availableFrom", date)}
+                    onChange={(date) => handleDateChange("availableFrom", date)}
+                    onBlur={() => handleBlur("availableFrom")}
                     showTimeSelect
                     timeFormat="HH:mm"
                     timeIntervals={15}
                     dateFormat="MMMM d, yyyy HH:mm"
                     minDate={new Date(Date.now() + 60000)}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none ${
-                      errors.availableFrom ? "border-red-300" : "border-border"
+                      errors.availableFrom && touched.availableFrom
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                        : "border-border"
                     }`}
                   />
-                  {errors.availableFrom && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.availableFrom}
-                    </p>
+                  {errors.availableFrom && touched.availableFrom && (
+                    <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{errors.availableFrom}</span>
+                    </div>
                   )}
                 </div>
                 <div>
@@ -202,20 +330,26 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   </div>
                   <DatePicker
                     selected={formData.availableUntil}
-                    onChange={(date) => handleChange("availableUntil", date)}
+                    onChange={(date) =>
+                      handleDateChange("availableUntil", date)
+                    }
+                    onBlur={() => handleBlur("availableUntil")}
                     showTimeSelect
                     timeFormat="HH:mm"
                     timeIntervals={15}
                     dateFormat="MMMM d, yyyy HH:mm"
                     minDate={formData.availableFrom}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none ${
-                      errors.availableUntil ? "border-red-300" : "border-border"
+                      errors.availableUntil && touched.availableUntil
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                        : "border-border"
                     }`}
                   />
-                  {errors.availableUntil && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.availableUntil}
-                    </p>
+                  {errors.availableUntil && touched.availableUntil && (
+                    <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{errors.availableUntil}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -236,8 +370,11 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   onChange={(e) =>
                     handleChange("duration", parseInt(e.target.value) || 0)
                   }
+                  onBlur={() => handleBlur("duration")}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.duration ? "border-red-300" : "border-border"
+                    errors.duration && touched.duration
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                      : "border-border"
                   }`}
                   min="1"
                   max="480"
@@ -245,8 +382,11 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                 <p className="mt-1 text-xs text-text-secondary">
                   1-480 minutes (8 hours max)
                 </p>
-                {errors.duration && (
-                  <p className="mt-1 text-sm text-red-600">{errors.duration}</p>
+                {errors.duration && touched.duration && (
+                  <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.duration}</span>
+                  </div>
                 )}
               </div>
 
@@ -263,22 +403,26 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   onChange={(e) =>
                     handleChange(
                       "totalQuestions",
-                      parseInt(e.target.value) || 0
+                      parseInt(e.target.value) || 0,
                     )
                   }
+                  onBlur={() => handleBlur("totalQuestions")}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.totalQuestions ? "border-red-300" : "border-border"
+                    errors.totalQuestions && touched.totalQuestions
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                      : "border-border"
                   }`}
                   min="1"
                   max="500"
                 />
                 <p className="mt-1 text-xs text-text-secondary">
-                  1-100 questions
+                  1-500 questions
                 </p>
-                {errors.totalQuestions && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.totalQuestions}
-                  </p>
+                {errors.totalQuestions && touched.totalQuestions && (
+                  <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.totalQuestions}</span>
+                  </div>
                 )}
               </div>
 
@@ -294,23 +438,25 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
                   onChange={(e) =>
                     handleChange(
                       "passingScore",
-                      parseFloat(e.target.value) || 0
+                      parseFloat(e.target.value) || 0,
                     )
                   }
+                  onBlur={() => handleBlur("passingScore")}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.passingScore ? "border-red-300" : "border-border"
+                    errors.passingScore && touched.passingScore
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                      : "border-border"
                   }`}
                   min="0"
                   max="100"
                   step="0.01"
                 />
-                <p className="mt-1 text-xs text-text-secondary">
-                  passing score(%)
-                </p>
-                {errors.passingScore && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.passingScore}
-                  </p>
+                <p className="mt-1 text-xs text-text-secondary">0-100%</p>
+                {errors.passingScore && touched.passingScore && (
+                  <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errors.passingScore}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -335,15 +481,17 @@ export const CreateExamModal = ({ onClose, onSubmit }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-border text-text-secondary rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-border text-text-secondary rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+              disabled={!isValid || isSubmitting}
+              className={`px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark flex items-center gap-2 transition-colors ${
+                !isValid ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               {isSubmitting ? (
                 <>

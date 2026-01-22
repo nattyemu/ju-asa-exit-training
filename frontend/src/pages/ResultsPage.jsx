@@ -167,7 +167,6 @@ export const ResultsPage = () => {
         rank: resultData?.rank || 0,
         performance:
           resultData?.score >= examData?.passingScore ? "PASS" : "FAIL",
-        percentile: "N/A",
       },
       exam: {
         id: examData?.id,
@@ -270,7 +269,6 @@ export const ResultsPage = () => {
 
   const passed = result?.result?.performance === "PASS";
   const score = result?.result?.score || 0;
-  const percentile = result?.result?.percentile || "N/A";
   const isAutoSubmitted =
     session?.isAutoSubmitted || submissionStatus === "auto_submitted";
 
@@ -389,12 +387,6 @@ export const ResultsPage = () => {
                   </span>
                   <span className="font-semibold text-text-primary">
                     {formatRank(result?.result?.rank)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-text-secondary">Percentile</span>
-                  <span className="font-semibold text-text-primary">
-                    {percentile !== "N/A" ? `${percentile}` : "Calculating..."}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

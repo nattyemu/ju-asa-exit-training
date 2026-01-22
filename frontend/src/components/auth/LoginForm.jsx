@@ -1,47 +1,122 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Mail, Lock, LogIn, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import toast from "react-hot-toast";
 
 export const LoginForm = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+  });
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValid, setIsValid] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Validation rules based on backend schema
+  const validateField = (name, value) => {
+    switch (name) {
+      case "email":
+        if (!value.trim()) return "Email is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          return "Please enter a valid email address";
+        if (value.length < 5) return "Email must be at least 5 characters";
+        return "";
+
+      case "password":
+        if (!value.trim()) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  // Validate entire form
+  const validateForm = () => {
+    const emailError = validateField("email", formData.email);
+    const passwordError = validateField("password", formData.password);
+
+    setErrors({
+      email: emailError,
+      password: passwordError,
+    });
+
+    return !emailError && !passwordError;
+  };
+
+  // Update validation on form change
+  useEffect(() => {
+    setIsValid(validateForm());
+  }, [formData]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Validate field if it's been touched
+    if (touched[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateField(name, value),
+      }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    // Validate the blurred field
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, formData[name]),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // console.log("Login form submitted", { email, password });
 
-    if (!email || !password) {
-      toast.error("Please enter both email and password");
+    // Mark all fields as touched
+    setTouched({
+      email: true,
+      password: true,
+    });
+
+    // Validate form
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // console.log("Calling login function...");
-      const result = await login(email, password);
-      // console.log("Login result:", result);
+      const result = await login(formData.email, formData.password);
 
       if (result.success) {
         toast.success("Login successful!");
-        // Get redirect path from location state or default to dashboard
         const from = location.state?.from?.pathname || "/dashboard";
-        // console.log("Redirecting to:", from);
         navigate(from, { replace: true });
       } else {
         toast.error(result.message || "Login failed");
       }
     } catch (error) {
-      // console.error("Login error:", error);
       toast.error(error.message || "An error occurred during login");
     } finally {
       setIsLoading(false);
@@ -54,8 +129,7 @@ export const LoginForm = () => {
 
   return (
     <div className="w-full animate-fade-in">
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="space-y-5">
           {/* Email Field */}
           <div>
@@ -64,18 +138,32 @@ export const LoginForm = () => {
             </label>
             <div className="relative group">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-                <Mail className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Mail
+                  className={`w-5 h-5 ${errors.email ? "text-red-400" : "text-gray-400"} group-focus-within:text-emerald-600 transition-colors`}
+                />
               </div>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`w-full pl-12 pr-4 py-3.5 bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg ${
+                  errors.email && touched.email
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300"
+                }`}
                 placeholder="student@ju.edu.et"
                 required
                 disabled={isLoading}
               />
             </div>
+            {errors.email && touched.email && (
+              <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errors.email}</span>
+              </div>
+            )}
           </div>
 
           {/* Password Field */}
@@ -87,13 +175,21 @@ export const LoginForm = () => {
             </div>
             <div className="relative group">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-                <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Lock
+                  className={`w-5 h-5 ${errors.password ? "text-red-400" : "text-gray-400"} group-focus-within:text-emerald-600 transition-colors`}
+                />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`w-full pl-12 pr-12 py-3.5 bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg ${
+                  errors.password && touched.password
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300"
+                }`}
                 placeholder="Enter your password"
                 required
                 disabled={isLoading}
@@ -112,13 +208,30 @@ export const LoginForm = () => {
                 )}
               </button>
             </div>
+            {errors.password && touched.password && (
+              <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errors.password}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 text-right">
+            <Link
+              to="/reset-password"
+              className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+            >
+              Forgot your password?
+            </Link>
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl mt-2"
+            disabled={!isValid || isLoading}
+            className={`w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl mt-2 ${
+              !isValid ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             style={{
               backgroundColor: "#134E4A",
               backgroundImage:

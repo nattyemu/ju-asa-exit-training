@@ -93,7 +93,7 @@ export const NotificationsPage = () => {
             const activeExams = getActiveExams();
             const updatedExams = activeExams.map((exam) => {
               const stat = response.data.data.activeExams.find(
-                (s) => s.examId === exam.id
+                (s) => s.examId === exam.id,
               );
               return {
                 ...exam,
@@ -177,7 +177,7 @@ export const NotificationsPage = () => {
       }
     } catch (error) {
       toast.error(
-        error.response?.data?.message || "Failed to send exam reminders"
+        error.response?.data?.message || "Failed to send exam reminders",
       );
     } finally {
       setIsLoading(false);
@@ -194,7 +194,7 @@ export const NotificationsPage = () => {
     try {
       setIsLoading(true);
       const response = await adminService.sendUnstartedExamReminders(
-        selectedUnstartedExam
+        selectedUnstartedExam,
       );
 
       if (response.data.success) {
@@ -205,7 +205,7 @@ export const NotificationsPage = () => {
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "Failed to send unstarted exam reminders"
+          "Failed to send unstarted exam reminders",
       );
     } finally {
       setIsLoading(false);
@@ -373,7 +373,7 @@ export const NotificationsPage = () => {
                                   <span className="flex-1">
                                     {exam.title} - Starts:{" "}
                                     {new Date(
-                                      exam.availableFrom
+                                      exam.availableFrom,
                                     ).toLocaleString()}
                                   </span>
                                 </li>
@@ -437,7 +437,7 @@ export const NotificationsPage = () => {
                               <option key={exam.id} value={exam.id}>
                                 {exam.title} -{" "}
                                 {new Date(
-                                  exam.availableFrom
+                                  exam.availableFrom,
                                 ).toLocaleTimeString("en-US", {
                                   hour: "2-digit",
                                   minute: "2-digit",
@@ -547,7 +547,7 @@ export const NotificationsPage = () => {
                                             }
                                             onChange={(e) =>
                                               setSelectedUnstartedExam(
-                                                e.target.value
+                                                e.target.value,
                                               )
                                             }
                                             className="mt-1"
@@ -576,7 +576,7 @@ export const NotificationsPage = () => {
                                                 <span className="text-xs text-gray-600">
                                                   Available until:{" "}
                                                   {new Date(
-                                                    exam.availableUntil
+                                                    exam.availableUntil,
                                                   ).toLocaleDateString()}
                                                 </span>
                                               </div>
@@ -653,7 +653,8 @@ export const NotificationsPage = () => {
                             <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                             <span className="text-sm font-medium text-gray-700">
                               {displayExams.find(
-                                (e) => e.id.toString() === selectedUnstartedExam
+                                (e) =>
+                                  e.id.toString() === selectedUnstartedExam,
                               )?.unstartedStudents || 0}{" "}
                               students will receive this notification
                             </span>
@@ -699,7 +700,7 @@ export const NotificationsPage = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Announcement Title
+                        Announcement Title *
                       </label>
                       <input
                         type="text"
@@ -710,15 +711,49 @@ export const NotificationsPage = () => {
                             title: e.target.value,
                           })
                         }
-                        className="w-full p-3 bg-background-light border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        className={`w-full p-3 bg-background-light border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                          (announcementData.title.length > 0 &&
+                            announcementData.title.length < 5) ||
+                          announcementData.title.length > 100
+                            ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                            : "border-border"
+                        }`}
                         placeholder="e.g., System Maintenance Notice"
-                        maxLength={100}
                       />
+                      <div className="mt-2 flex justify-between items-center">
+                        <p className="text-xs text-text-secondary">
+                          Title should be clear and concise
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            (announcementData.title.length > 0 &&
+                              announcementData.title.length < 5) ||
+                            announcementData.title.length > 100
+                              ? "text-red-600 font-medium"
+                              : "text-text-secondary"
+                          }`}
+                        >
+                          {announcementData.title.length}/100 characters
+                        </p>
+                      </div>
+                      {announcementData.title.length > 0 &&
+                        announcementData.title.length < 5 && (
+                          <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            <span>Title must be at least 5 characters</span>
+                          </div>
+                        )}
+                      {announcementData.title.length > 100 && (
+                        <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Title cannot exceed 100 characters</span>
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Announcement Message
+                        Announcement Message *
                       </label>
                       <textarea
                         value={announcementData.message}
@@ -728,13 +763,44 @@ export const NotificationsPage = () => {
                             message: e.target.value,
                           })
                         }
-                        className="w-full p-3 bg-background-light border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all min-h-[150px] resize-none"
+                        className={`w-full p-3 bg-background-light border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all min-h-[150px] resize-none ${
+                          (announcementData.message.length > 0 &&
+                            announcementData.message.length < 10) ||
+                          announcementData.message.length > 500
+                            ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                            : "border-border"
+                        }`}
                         placeholder="Type your announcement message here..."
-                        maxLength={1000}
                       />
-                      <p className="text-xs text-text-secondary mt-2">
-                        This message will be sent to all active users via email.
-                      </p>
+                      <div className="mt-2 flex justify-between items-center">
+                        <p className="text-xs text-text-secondary">
+                          Message will be sent to all active users via email
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            (announcementData.message.length > 0 &&
+                              announcementData.message.length < 10) ||
+                            announcementData.message.length > 500
+                              ? "text-red-600 font-medium"
+                              : "text-text-secondary"
+                          }`}
+                        >
+                          {announcementData.message.length}/500 characters
+                        </p>
+                      </div>
+                      {announcementData.message.length > 0 &&
+                        announcementData.message.length < 10 && (
+                          <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            <span>Message must be at least 10 characters</span>
+                          </div>
+                        )}
+                      {announcementData.message.length > 500 && (
+                        <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Message cannot exceed 500 characters</span>
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -742,9 +808,22 @@ export const NotificationsPage = () => {
                       disabled={
                         isLoading ||
                         !announcementData.title.trim() ||
-                        !announcementData.message.trim()
+                        !announcementData.message.trim() ||
+                        announcementData.title.length < 5 ||
+                        announcementData.title.length > 100 ||
+                        announcementData.message.length < 10 ||
+                        announcementData.message.length > 500
                       }
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className={`w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                        !announcementData.title.trim() ||
+                        !announcementData.message.trim() ||
+                        announcementData.title.length < 5 ||
+                        announcementData.title.length > 100 ||
+                        announcementData.message.length < 10 ||
+                        announcementData.message.length > 500
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-green-700"
+                      }`}
                     >
                       {isLoading ? (
                         <>
