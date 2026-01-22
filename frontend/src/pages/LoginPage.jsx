@@ -7,8 +7,6 @@ export const LoginPage = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  // console.log("LoginPage rendering", { loading, isAuthenticated });
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
@@ -23,8 +21,6 @@ export const LoginPage = () => {
   }
 
   if (isAuthenticated) {
-    // console.log("User is authenticated, redirecting...");
-    // Get redirect path from URL or default to dashboard
     const from = location.state?.from?.pathname || "/dashboard";
     return <Navigate to={from} replace />;
   }
@@ -119,7 +115,7 @@ export const LoginPage = () => {
               </p>
             </div>
 
-            <LoginForm />
+            <LoginForm />         
           </div>
 
           {/* Mobile Footer - Only shows on mobile */}

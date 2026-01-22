@@ -1,7 +1,8 @@
+// src/components/auth/LoginForm.jsx
 import React from "react";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import toast from "react-hot-toast";
@@ -17,7 +18,6 @@ export const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // console.log("Login form submitted", { email, password });
 
     if (!email || !password) {
       toast.error("Please enter both email and password");
@@ -27,21 +27,16 @@ export const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // console.log("Calling login function...");
       const result = await login(email, password);
-      // console.log("Login result:", result);
 
       if (result.success) {
         toast.success("Login successful!");
-        // Get redirect path from location state or default to dashboard
         const from = location.state?.from?.pathname || "/dashboard";
-        // console.log("Redirecting to:", from);
         navigate(from, { replace: true });
       } else {
         toast.error(result.message || "Login failed");
       }
     } catch (error) {
-      // console.error("Login error:", error);
       toast.error(error.message || "An error occurred during login");
     } finally {
       setIsLoading(false);
@@ -54,7 +49,6 @@ export const LoginForm = () => {
 
   return (
     <div className="w-full animate-fade-in">
-      {/* Form */}
       <form onSubmit={handleSubmit}>
         <div className="space-y-5">
           {/* Email Field */}
@@ -113,7 +107,14 @@ export const LoginForm = () => {
               </button>
             </div>
           </div>
-
+            <div className="mt-6 text-right">
+              <Link
+                to="/reset-password"
+                className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+              >
+                Forgot your password?
+              </Link>
+            </div>
           {/* Submit Button */}
           <button
             type="submit"
@@ -150,8 +151,7 @@ export const LoginForm = () => {
           </div>
         </div>
       </form>
-
-      {/* Footer - Hidden on mobile, shown on desktop */}
+  {/* Footer - Hidden on mobile, shown on desktop */}
       <div className="hidden lg:block mt-8 text-center">
         <p className="text-sm text-gray-500">
           © {new Date().getFullYear()} JU ASA Exit Exam Platform
@@ -160,6 +160,6 @@ export const LoginForm = () => {
           For official use by authorized JU ASA students
         </p>
       </div>
-    </div>
+      </div>
   );
 };

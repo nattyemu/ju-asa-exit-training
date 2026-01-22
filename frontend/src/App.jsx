@@ -27,6 +27,8 @@ import { NotificationsPage } from "./pages/admin/NotificationsPage";
 
 import "./App.css";
 import { ExamGuard } from "./components/common/ExamGuard";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { PasswordResetProvider } from "./contexts/PasswordResetContext";
 
 function AppContent() {
   return (
@@ -71,6 +73,14 @@ function AppContent() {
           element={
             <PublicRoute>
               <LoginPage />
+            </PublicRoute>
+          }
+        />
+    <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
             </PublicRoute>
           }
         />
@@ -166,6 +176,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <PasswordResetProvider>
         <ExamProvider>
           <React.Suspense
             fallback={
@@ -177,6 +188,7 @@ function App() {
             <AppContent />
           </React.Suspense>
         </ExamProvider>
+        </PasswordResetProvider>
       </AuthProvider>
     </Router>
   );

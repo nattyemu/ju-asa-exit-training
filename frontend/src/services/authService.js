@@ -50,7 +50,67 @@ export const authService = {
       // console.error("authService.logout error:", error);
     }
   },
+  forgotPassword: async (email) => {
+    try {
+      const response = await api.post("/auth/forgot-password", { email });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        data: response.data.data || null,
+      };
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to send OTP. Please try again.",
+        data: null,
+      };
+    }
+  },
 
+  verifyOtp: async (email, otp) => {
+    try {
+      const response = await api.post("/auth/confirm-otp", { email, otp });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        data: response.data.data || null,
+      };
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to verify OTP. Please try again.",
+        data: null,
+      };
+    }
+  },
+
+  resetPassword: async (email, otp, password, confirmPassword) => {
+    try {
+      const response = await api.post("/auth/new-password", {
+        email,
+        otp,
+        password,
+        confirmPassword,
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        data: response.data.data || null,
+      };
+    } catch (error) {
+      console.error("Reset password error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to reset password. Please try again.",
+        data: null,
+      };
+    }
+  },
   getCurrentUser: () => {
     try {
       const userStr = localStorage.getItem("user");
