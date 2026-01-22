@@ -1,6 +1,12 @@
-// src/components/auth/ResetPasswordForm.jsx
-import React, { useState } from "react";
-import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import toast from "react-hot-toast";
 import { authService } from "../../services/authService";
@@ -9,6 +15,14 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
+  });
+  const [errors, setErrors] = useState({
+    password: "",
+    confirmPassword: "",
+  });
+  const [touched, setTouched] = useState({
+    password: false,
+    confirmPassword: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -19,7 +33,9 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
     lowercase: false,
     number: false,
   });
+  const [isValid, setIsValid] = useState(false);
 
+  // Validate password based on backend schema
   const validatePassword = (password) => {
     const newRequirements = {
       length: password.length >= 8 && password.length <= 42,
@@ -28,15 +44,91 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
       number: /\d/.test(password),
     };
     setRequirements(newRequirements);
-    return Object.values(newRequirements).every(Boolean);
+
+    if (!password.trim()) return "Password is required";
+    if (password.length < 8) return "Password must be at least 8 characters";
+    if (password.length > 42) return "Password must be less than 42 characters";
+    if (!/[A-Z]/.test(password))
+      return "At least one uppercase letter required";
+    if (!/[a-z]/.test(password))
+      return "At least one lowercase letter required";
+    if (!/\d/.test(password)) return "At least one number required";
+
+    return "";
   };
+
+  const validateConfirmPassword = (confirmPassword, password) => {
+    if (!confirmPassword.trim()) return "Please confirm your password";
+    if (confirmPassword !== password) return "Passwords do not match";
+    return "";
+  };
+
+  // Validate entire form
+  const validateForm = () => {
+    const passwordError = validatePassword(formData.password);
+    const confirmError = validateConfirmPassword(
+      formData.confirmPassword,
+      formData.password,
+    );
+
+    setErrors({
+      password: passwordError,
+      confirmPassword: confirmError,
+    });
+
+    return !passwordError && !confirmError;
+  };
+
+  // Update validation on form changes
+  useEffect(() => {
+    setIsValid(validateForm());
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
+    // Validate field if it's been touched
+    if (touched[name]) {
+      if (name === "password") {
+        setErrors((prev) => ({
+          ...prev,
+          password: validatePassword(value),
+          confirmPassword: validateConfirmPassword(
+            formData.confirmPassword,
+            value,
+          ),
+        }));
+      } else if (name === "confirmPassword") {
+        setErrors((prev) => ({
+          ...prev,
+          confirmPassword: validateConfirmPassword(value, formData.password),
+        }));
+      }
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
     if (name === "password") {
-      validatePassword(value);
+      setErrors((prev) => ({
+        ...prev,
+        password: validatePassword(formData.password),
+        confirmPassword: validateConfirmPassword(
+          formData.confirmPassword,
+          formData.password,
+        ),
+      }));
+    } else if (name === "confirmPassword") {
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: validateConfirmPassword(
+          formData.confirmPassword,
+          formData.password,
+        ),
+      }));
     }
   };
 
@@ -50,32 +142,32 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const { password, confirmPassword } = formData;
 
-    if (!password || !confirmPassword) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+    // Mark all fields as touched
+    setTouched({
+      password: true,
+      confirmPassword: true,
+    });
 
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (!validatePassword(password)) {
-      toast.error("Password does not meet requirements");
+    // Validate form
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      const result = await authService.resetPassword(email, otp, password, confirmPassword);
-      
+      const result = await authService.resetPassword(
+        email,
+        otp,
+        formData.password,
+        formData.confirmPassword,
+      );
+
       if (result.success) {
         toast.success("Password reset successfully!");
-        
+
         if (onSuccess) {
           onSuccess();
         }
@@ -111,22 +203,30 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="space-y-6">
+          {/* New Password Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               New Password
             </label>
             <div className="relative group">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-                <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Lock
+                  className={`w-5 h-5 ${errors.password && touched.password ? "text-red-400" : "text-gray-400"} group-focus-within:text-emerald-600 transition-colors`}
+                />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm"
+                onBlur={handleBlur}
+                className={`w-full pl-12 pr-12 py-3.5 bg-white border rounded-xl focus:ring-2 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm ${
+                  errors.password && touched.password
+                    ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-2 focus:ring-emerald-200"
+                }`}
                 placeholder="Enter new password"
                 required
                 disabled={isLoading}
@@ -144,20 +244,36 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
                 )}
               </button>
             </div>
-            <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 mt-2">
+            {errors.password && touched.password && (
+              <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errors.password}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Confirm New Password
             </label>
             <div className="relative group">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-                <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Lock
+                  className={`w-5 h-5 ${errors.confirmPassword && touched.confirmPassword ? "text-red-400" : "text-gray-400"} group-focus-within:text-emerald-600 transition-colors`}
+                />
               </div>
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm"
+                onBlur={handleBlur}
+                className={`w-full pl-12 pr-12 py-3.5 bg-white border rounded-xl focus:ring-2 focus:border-emerald-500 outline-none transition-all duration-200 shadow-sm ${
+                  errors.confirmPassword && touched.confirmPassword
+                    ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-2 focus:ring-emerald-200"
+                }`}
                 placeholder="Confirm new password"
                 required
                 disabled={isLoading}
@@ -175,42 +291,66 @@ export const ResetPasswordForm = ({ email, otp, onBack, onSuccess }) => {
                 )}
               </button>
             </div>
-            {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-              <p className="mt-2 text-sm text-red-600">Passwords do not match</p>
+            {errors.confirmPassword && touched.confirmPassword && (
+              <div className="mt-2 flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errors.confirmPassword}</span>
+              </div>
             )}
           </div>
-            <div className="mt-3 space-y-2">
-              <p className="text-sm font-medium text-gray-700">Password must contain:</p>
-              <ul className="space-y-1">
-                <li className={`text-sm flex items-center gap-2 ${requirements.length ? "text-emerald-600" : "text-gray-500"}`}>
-                  <CheckCircle className="w-4 h-4" />
-                  8-42 characters
-                </li>
-                <li className={`text-sm flex items-center gap-2 ${requirements.uppercase ? "text-emerald-600" : "text-gray-500"}`}>
-                  <CheckCircle className="w-4 h-4" />
-                  At least one uppercase letter
-                </li>
-                <li className={`text-sm flex items-center gap-2 ${requirements.lowercase ? "text-emerald-600" : "text-gray-500"}`}>
-                  <CheckCircle className="w-4 h-4" />
-                  At least one lowercase letter
-                </li>
-                <li className={`text-sm flex items-center gap-2 ${requirements.number ? "text-emerald-600" : "text-gray-500"}`}>
-                  <CheckCircle className="w-4 h-4" />
-                  At least one number
-                </li>
-              </ul>
-            </div>
+
+          {/* Password Requirements */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              Password must contain:
+            </p>
+            <ul className="space-y-2">
+              <li
+                className={`text-sm flex items-center gap-2 ${requirements.length ? "text-emerald-600" : "text-gray-500"}`}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 ${requirements.length ? "text-emerald-500" : "text-gray-400"}`}
+                />
+                8-42 characters
+              </li>
+              <li
+                className={`text-sm flex items-center gap-2 ${requirements.uppercase ? "text-emerald-600" : "text-gray-500"}`}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 ${requirements.uppercase ? "text-emerald-500" : "text-gray-400"}`}
+                />
+                At least one uppercase letter (A-Z)
+              </li>
+              <li
+                className={`text-sm flex items-center gap-2 ${requirements.lowercase ? "text-emerald-600" : "text-gray-500"}`}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 ${requirements.lowercase ? "text-emerald-500" : "text-gray-400"}`}
+                />
+                At least one lowercase letter (a-z)
+              </li>
+              <li
+                className={`text-sm flex items-center gap-2 ${requirements.number ? "text-emerald-600" : "text-gray-500"}`}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 ${requirements.number ? "text-emerald-500" : "text-gray-400"}`}
+                />
+                At least one number (0-9)
+              </li>
+            </ul>
           </div>
 
-          
-
+          {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg"
+            disabled={!isValid || isLoading}
+            className={`w-full text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg ${
+              !isValid ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             style={{
               backgroundColor: "#134E4A",
-              backgroundImage: "linear-gradient(135deg, #134E4A 0%, #0D3A36 100%)",
+              backgroundImage:
+                "linear-gradient(135deg, #134E4A 0%, #0D3A36 100%)",
             }}
           >
             {isLoading ? (
