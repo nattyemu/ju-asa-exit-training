@@ -18,6 +18,8 @@ export const users = mysqlTable("users", {
   role: varchar("role", { length: 50 }).notNull().default("STUDENT"),
   createdAt: datetime("created_at").default(new Date()),
   isActive: boolean("is_active").notNull().default(true),
+  resetPasswordOTP: varchar("reset_password_otp", { length:  6}),
+  resetPasswordExpires: datetime("reset_password_expires"),
 });
 
 export const profiles = mysqlTable(

@@ -75,3 +75,32 @@ export const updateProfileSchema = z.object({
     .optional(),
   profileImageUrl: z.string().nullable().optional(),
 });
+
+export const forgetPassowd = z.object({
+  email: z.email("Please enter a valid email address"),
+});
+
+export const confirmOtpSchema = z.object({
+  otp: z.string().min(1, "OTP is required"),
+  email: z.email("Please enter a valid email address"),
+});
+
+export const newPasswordSchema = z.object({
+  email: z.email("Please enter a valid email address"),
+  otp: z.string().min(1, "OTP is required"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .max(42, "Password must be less than 42 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    ),
+  confirmPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters long")
+    .max(42, "Password must be less than 42 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});

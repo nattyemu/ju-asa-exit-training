@@ -1,8 +1,10 @@
 import { db } from "../db/connection.js";
 import { users, profiles } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { hashPassword, comparePassword, generateToken } from "../utils/auth.js";
-import { registerSchema, loginSchema } from "../validations/authSchemas.js";
+import { registerSchema, loginSchema, forgetPassowd, confirmOtpSchema, newPasswordSchema } from "../validations/authSchemas.js";
+import generateOTP from "../utils/generateOTP.js";
+import { sendEmail } from "../utils/emailSender.js";
 
 const formatZodError = (error) => {
   if (error.issues && error.issues.length > 0) {
@@ -211,6 +213,186 @@ export const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Login failed. Please try again.",
+    });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const validationResult = forgetPassowd.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: formatZodError(validationResult.error),
+      });
+    }
+
+    const { email } = validationResult.data;
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: "If your email is registered, you will receive an OTP shortly.",
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    
+    // Set expiration time (3 minutes from now)
+    const expirationTime = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Update user with OTP and expiration time
+    await db
+      .update(users)
+      .set({ 
+        resetPasswordOTP: otp,
+        resetPasswordExpires: expirationTime 
+      })
+      .where(eq(users.email, email));
+
+    // Send email with OTP
+    const emailResult = await sendEmail(email, otp);
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email. Please try again.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP has been sent to your email. It expires in 10 minutes.",
+      data: {
+        email: email,
+      },
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again.",
+    });
+  }
+};
+
+export const confirmOtp = async (req, res) => {
+  try {
+    const validationResult = confirmOtpSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: formatZodError(validationResult.error),
+      });
+    }
+
+    const { email, otp } = validationResult.data;
+
+    // Find user with valid OTP (not expired)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.email, email),
+          eq(users.resetPasswordOTP, otp),
+          gt(users.resetPasswordExpires, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please request a new one.",
+      });
+    }
+
+    // OTP is valid, we can proceed to password reset
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully. You can now reset your password.",
+      data: {
+        email,
+        otp, // Include OTP for the next step
+      },
+    });
+  } catch (error) {
+    console.error("Confirm OTP error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again.",
+    });
+  }
+};
+
+export const newPassword = async (req, res) => {
+  try {
+    const validationResult = newPasswordSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: formatZodError(validationResult.error),
+      });
+    }
+
+    const { email, otp, password } = validationResult.data;
+
+    // Verify OTP is still valid
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.email, email),
+          eq(users.resetPasswordOTP, otp),
+          gt(users.resetPasswordExpires, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please start the process again.",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(password);
+
+    // Update password and clear OTP fields
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        resetPasswordOTP: null,
+        resetPasswordExpires: null,
+      })
+      .where(eq(users.email, email));
+
+    // Send confirmation email
+    await sendEmail(email, null, true); // true indicates password reset confirmation
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. You can now login with your new password.",
+    });
+  } catch (error) {
+    console.error("New password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again.",
     });
   }
 };
