@@ -33,14 +33,14 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
-  })
+  }),
 );
 
 // Security middleware
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
+  }),
 );
 
 // Serve static files
@@ -95,5 +95,4 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📚 JU ASA Exit Exam Training Platform Backend`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
 });
