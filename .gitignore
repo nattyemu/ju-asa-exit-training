@@ -48,10 +48,9 @@ jspm_packages/
 .node_repl_history
 
 # Drizzle specific (in backend folder)
-drizzle/
-.drizzle/
-*.db
-*.sqlite
+
+backend/drizzle/.temp/
+!backend/drizzle/.gitkeep
 
 # Backend specific
 backend/.env
