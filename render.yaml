@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: exit-platform-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: c2396d8c2f592f439d6c26074a2c475aa957d10eb3d757ee12b726d83d1ffd749a4aec1d025b7212722b43df798cc68cbc666db07c818b60709cd3b5d0d193fe
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        value: https://ju-asa-exit-exam-practice.vercel.app
+      - key: EMAIL
+        value: natnaelbayut@gmail.com
+      - key: EMAIL_PASSWORD
+        value: fvma wphx swzp hrwv
