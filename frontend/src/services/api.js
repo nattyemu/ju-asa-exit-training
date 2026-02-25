@@ -2,7 +2,8 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const API_BASE_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_BACKEND_URL ||
+  "https://ju-asa-exit-training.onrender.com/api";
 let lastNetworkErrorTime = 0;
 const NETWORK_ERROR_DEBOUNCE_MS = 3000;
 const api = axios.create({
@@ -27,7 +28,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for error handling
@@ -166,7 +167,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add a helper method to check if user is authenticated
