@@ -5,11 +5,11 @@ export const profileService = {
   updateProfile: async (profileData, imageFile = null) => {
     try {
       let imageUrl = profileData.profileImageUrl || "";
+      let publicId = profileData.publicId || "";
 
       // Upload new image if provided
       if (imageFile && imageFile instanceof File) {
         try {
-          // console.log("Uploading profile image:", imageFile.name);
           const formData = new FormData();
           formData.append("image", imageFile);
 
@@ -21,80 +21,48 @@ export const profileService = {
 
           if (uploadResponse.data.success && uploadResponse.data.url) {
             imageUrl = uploadResponse.data.url;
-            // console.log(`Image uploaded successfully: ${imageUrl}`);
+            publicId = uploadResponse.data.publicId; // Cloudinary publicId
 
-            // If there was an old image, delete it
-            if (
-              profileData.profileImageUrl &&
-              profileData.profileImageUrl !== imageUrl
-            ) {
-              // Extract filename from old URL
-              const oldFilename = profileData.profileImageUrl.split("/").pop();
-              if (oldFilename && oldFilename !== "undefined") {
-                try {
-                  await api.delete(`/upload/profiles/${oldFilename}`);
-                  // console.log(`✅ Deleted old image: ${oldFilename}`);
-                } catch (deleteError) {
-                  // console.warn(
-                  //   `⚠️ Failed to delete old image: ${deleteError.message}`
-                  // );
-                }
+            // If there was an old image, delete it using publicId
+            if (profileData.publicId && profileData.publicId !== publicId) {
+              try {
+                await api.delete(`/upload/profiles/${profileData.publicId}`);
+              } catch (deleteError) {
+                // Ignore delete errors
               }
             }
-          } else {
-            // console.warn("Image upload failed:", uploadResponse.data.message);
           }
         } catch (uploadError) {
-          // console.error("Failed to upload image:", uploadError);
+          console.error("Failed to upload image:", uploadError);
         }
       }
 
-      // Prepare data with updated image URL
+      // Prepare data with updated image URL and publicId
       const requestData = {
         ...profileData,
         profileImageUrl: imageUrl || profileData.profileImageUrl || null,
+        publicId: publicId || profileData.publicId || null, // Store publicId for future deletions
       };
 
-      // console.log("Sending profile update request with data:", requestData);
-
       const response = await api.put("/user/profile", requestData);
-      // console.log("Profile update response:", response.data);
       return response.data;
     } catch (error) {
-      // console.error("Error updating profile:", error);
-      // console.error("Error details:", {
-      //   status: error.response?.status,
-      //   data: error.response?.data,
-      //   message: error.message,
-      // });
+      console.error("Error updating profile:", error);
       throw error;
     }
   },
 
-  // Delete profile image
-  deleteProfileImage: async (imageUrl) => {
+  // Delete profile image - UPDATED to use publicId
+  deleteProfileImage: async (publicId) => {
     try {
-      if (
-        !imageUrl ||
-        imageUrl === "" ||
-        imageUrl === "null" ||
-        imageUrl === "undefined"
-      ) {
+      if (!publicId) {
         return { success: true, message: "No image to delete" };
       }
 
-      // Extract filename from URL
-      const filename = imageUrl.split("/").pop();
-
-      if (!filename || filename === "undefined" || filename === "null") {
-        return { success: true, message: "Invalid filename" };
-      }
-
-      // console.log(`Deleting profile image: ${filename}`);
-      const response = await api.delete(`/upload/profiles/${filename}`);
+      const response = await api.delete(`/upload/profiles/${publicId}`);
       return response.data;
     } catch (error) {
-      // console.error("Error deleting profile image:", error);
+      console.error("Error deleting profile image:", error);
       return {
         success: false,
         message: "Failed to delete profile image",
@@ -103,7 +71,7 @@ export const profileService = {
     }
   },
 
-  // Upload profile image only
+  // Upload profile image only - already working
   uploadProfileImage: async (imageFile) => {
     try {
       const formData = new FormData();
@@ -117,7 +85,7 @@ export const profileService = {
 
       return response.data;
     } catch (error) {
-      // console.error("Error uploading profile image:", error);
+      console.error("Error uploading profile image:", error);
       throw error;
     }
   },

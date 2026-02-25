@@ -55,6 +55,7 @@ backend/drizzle/.temp/
 # Backend specific
 backend/.env
 backend/dist/
+backend/public/*
 
 # Frontend specific
 frontend/.env
