@@ -79,7 +79,7 @@ export const Dashboard = () => {
       }
     } catch (error) {
       // console.error("Failed to load admin stats:", error);
-      toast.error("Failed to load admin dashboard statistics");
+      // toast.error("Failed to load admin dashboard statistics");
       setAdminStats({
         activeExams: 0,
         totalStudents: 0,
@@ -146,7 +146,7 @@ export const Dashboard = () => {
             // DIFFERENT exam - block and show message
             toast.error(
               `You have an active session for another exam. Please complete or cancel it first.`,
-              { duration: 3000 }
+              { duration: 3000 },
             );
 
             // Optionally: Navigate to the active exam
@@ -251,7 +251,7 @@ export const Dashboard = () => {
         return;
       }
 
-      toast.error("Failed to start exam. Please try again.");
+      // toast.error("Failed to start exam. Please try again.");
     } finally {
       setStartingExamId(null);
     }
@@ -360,7 +360,7 @@ export const Dashboard = () => {
   const calculateStudentStats = () => {
     const completedExams = exams.filter((e) => e.status === "COMPLETED");
     const passedExams = completedExams.filter(
-      (e) => e.result?.score >= e.passingScore
+      (e) => e.result?.score >= e.passingScore,
     );
     const inProgressExams = exams.filter((e) => e.status === "IN_PROGRESS");
     const availableExams = exams.filter((e) => e.status === "NOT_STARTED");
@@ -586,10 +586,10 @@ export const Dashboard = () => {
                                 {index === 0
                                   ? "Active Exams"
                                   : index === 1
-                                  ? "Total Students"
-                                  : index === 2
-                                  ? "Questions"
-                                  : "Submissions Today"}
+                                    ? "Total Students"
+                                    : index === 2
+                                      ? "Questions"
+                                      : "Submissions Today"}
                               </p>
                               <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
                             </div>
