@@ -50,18 +50,10 @@ export const NotificationsPage = () => {
           const examsData = response.data.data.exams || [];
           setExams(examsData);
         } else {
-          toast.error("Failed to load exams: Invalid response from server");
+          // toast.error("Failed to load exams: Invalid response from server");
         }
       } catch (error) {
-        if (error.response?.status === 401) {
-          toast.error("Session expired. Please login again.");
-        } else if (error.response?.status === 403) {
-          toast.error("You don't have permission to view exams.");
-        } else if (error.response?.data?.message) {
-          toast.error(`Failed to load exams: ${error.response.data.message}`);
-        } else {
-          toast.error("Failed to load exams. Please check your connection.");
-        }
+        // toast.error("Failed to load exams. Please check your connection.");
       } finally {
         setIsLoadingExams(false);
       }
@@ -173,7 +165,7 @@ export const NotificationsPage = () => {
       if (response.data.success) {
         toast.success(response.data.message);
       } else {
-        toast.error(response.data.message || "Failed to send reminders");
+        // toast.error(response.data.message || "Failed to send reminders");
       }
     } catch (error) {
       toast.error(
@@ -200,7 +192,7 @@ export const NotificationsPage = () => {
       if (response.data.success) {
         toast.success(response.data.message);
       } else {
-        toast.error(response.data.message || "Failed to send reminders");
+        // toast.error(response.data.message || "Failed to send reminders");
       }
     } catch (error) {
       toast.error(
@@ -215,7 +207,7 @@ export const NotificationsPage = () => {
   // Handle sending system announcement
   const handleSendSystemAnnouncement = async () => {
     if (!announcementData.title.trim() || !announcementData.message.trim()) {
-      toast.error("Please fill in both title and message");
+      toast.info("Please fill in both title and message");
       return;
     }
 
@@ -230,7 +222,7 @@ export const NotificationsPage = () => {
         toast.success(response.data.message);
         setAnnouncementData({ title: "", message: "" });
       } else {
-        toast.error(response.data.message || "Failed to send announcement");
+        // toast.error(response.data.message || "Failed to send announcement");
       }
     } catch (error) {
       toast.error("Failed to send system announcement");
