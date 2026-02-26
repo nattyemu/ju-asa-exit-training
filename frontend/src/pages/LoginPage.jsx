@@ -26,7 +26,8 @@ export const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-8 sm:py-12">
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-8 sm:py-12 overflow-hidden">
+      {" "}
       <div className="w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-3 bg-white">
         {/* LEFT BRAND PANEL - 1/3 width on desktop, hidden on mobile */}
         <div
@@ -115,7 +116,7 @@ export const LoginPage = () => {
               </p>
             </div>
 
-            <LoginForm />         
+            <LoginForm />
           </div>
 
           {/* Mobile Footer - Only shows on mobile */}
