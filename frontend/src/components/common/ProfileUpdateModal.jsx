@@ -294,8 +294,6 @@ const ProfileUpdateModal = ({
         error.response.data.errors.forEach((err) => {
           toast.error(`${err.field}: ${err.message}`);
         });
-      } else {
-        toast.error("Failed to update profile. Please try again.");
       }
     } finally {
       setLoading(false);
