@@ -54,7 +54,7 @@ export const ExamManager = () => {
       setLoading(true);
       const response = await adminService.getAllExams(
         pagination.page,
-        pagination.limit
+        pagination.limit,
       );
       if (response.data.success) {
         setExams(response.data.data.exams);
@@ -62,7 +62,7 @@ export const ExamManager = () => {
       }
     } catch (error) {
       // console.error("Failed to load exams:", error);
-      toast.error("Failed to load exams. Please try again.");
+      // toast.error("Failed to load exams. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -76,14 +76,12 @@ export const ExamManager = () => {
         loadExams();
         setShowCreateModal(false);
       } else {
-        toast.error(response.data.message || "Failed to create exam");
+        // toast.error(response.data.message || "Failed to create exam");
       }
     } catch (error) {
       // console.error("Failed to create exam:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to create exam. Please try again.");
       }
     }
   };
@@ -95,15 +93,11 @@ export const ExamManager = () => {
         toast.success("Exam updated successfully!");
         loadExams();
         setShowEditModal(false);
-      } else {
-        toast.error(response.data.message || "Failed to update exam");
       }
     } catch (error) {
       // console.error("Failed to update exam:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to update exam. Please try again.");
       }
     }
   };
@@ -112,21 +106,17 @@ export const ExamManager = () => {
     try {
       const response = await adminService.updateExamStatus(
         examId,
-        !currentStatus
+        !currentStatus,
       );
       if (response.data.success) {
         const action = !currentStatus ? "activated" : "deactivated";
         toast.success(`Exam ${action} successfully!`);
         loadExams();
-      } else {
-        toast.error(response.data.message || "Failed to update exam status");
       }
     } catch (error) {
       // console.error("Failed to update exam status:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to update exam status. Please try again.");
       }
     }
   };
@@ -303,7 +293,7 @@ export const ExamManager = () => {
                 {exams.length > 0
                   ? Math.round(
                       exams.reduce((sum, e) => sum + e.totalQuestions, 0) /
-                        exams.length
+                        exams.length,
                     )
                   : 0}
               </p>
