@@ -6,7 +6,6 @@ import {
   UserX,
   Mail,
   GraduationCap,
-  Building,
   Calendar,
   Shield,
   Search,
@@ -14,9 +13,7 @@ import {
   Key,
   ChevronLeft,
 } from "lucide-react";
-import { format } from "date-fns";
 import { adminService } from "../../services/adminService";
-import { authService } from "../../services/authService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { RegisterStudentModal } from "./RegisterStudentModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
@@ -60,7 +57,7 @@ export const UserManager = () => {
       setLoading(true);
       const response = await adminService.getAllUsers(
         pagination.page,
-        pagination.limit
+        pagination.limit,
       );
 
       if (response.data && response.data.success) {
@@ -71,14 +68,14 @@ export const UserManager = () => {
             limit: pagination.limit,
             total: response.data.data.users?.length || 0,
             pages: 1,
-          }
+          },
         );
       } else {
         throw new Error("Invalid response format");
       }
     } catch (error) {
       // console.error("Failed to load users:", error);
-      toast.error(error.response?.data?.message || "Failed to load users");
+      // toast.error(error.response?.data?.message || "Failed to load users");
       setUsers([]);
       setPagination({
         page: 1,
@@ -100,7 +97,7 @@ export const UserManager = () => {
     } catch (error) {
       // console.error("Failed to register student:", error);
       toast.error(
-        error.response?.data?.message || "Failed to register student"
+        error.response?.data?.message || "Failed to register student",
       );
     }
   };
@@ -167,7 +164,7 @@ export const UserManager = () => {
     } catch (error) {
       // console.error("Failed to toggle status:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update user status"
+        error.response?.data?.message || "Failed to update user status",
       );
     }
   };
@@ -187,7 +184,7 @@ export const UserManager = () => {
     } catch (error) {
       // console.error("Failed to update user:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update user profile"
+        error.response?.data?.message || "Failed to update user profile",
       );
     }
   };
@@ -414,19 +411,10 @@ export const UserManager = () => {
                   Role
                 </th>
                 <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
-                  Department
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
-                  University
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
-                  Year
+                  Academic Info
                 </th>
                 <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
                   Status
-                </th>
-                <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
-                  Joined
                 </th>
                 <th className="text-left py-3 px-6 text-sm font-medium text-text-secondary">
                   Actions
@@ -434,197 +422,205 @@ export const UserManager = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr
-                  key={user.id}
-                  className="border-b border-border hover:bg-gray-50"
-                >
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div
-                          className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer hover:scale-105 transition-transform duration-200"
-                          onClick={() => {
-                            if (user.profile?.profileImageUrl) {
-                              openImageModal(
-                                user.profile.profileImageUrl,
-                                user.profile?.fullName || user.email
-                              );
-                            }
-                          }}
-                        >
-                          {user.profile?.profileImageUrl ? (
-                            <>
-                              <img
-                                src={getProfileImageUrl(
-                                  user.profile.profileImageUrl
-                                )}
-                                alt={user.profile.fullName}
-                                className="w-full h-full object-cover"
-                                onError={handleImageError}
-                              />
-                              <div className="hidden w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full items-center justify-center text-white font-bold">
-                                {user.profile?.fullName?.charAt(0) || "U"}
-                              </div>
-                            </>
-                          ) : (
-                            <div
-                              className="w-full h-full bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
-                              onClick={() =>
+              {filteredUsers && filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="border-b border-border hover:bg-gray-50"
+                  >
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div
+                            className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer hover:scale-105 transition-transform duration-200"
+                            onClick={() => {
+                              if (user.profile?.profileImageUrl) {
                                 openImageModal(
-                                  null,
-                                  user.profile?.fullName || user.email
-                                )
+                                  user.profile.profileImageUrl,
+                                  user.profile?.fullName || user.email,
+                                );
                               }
-                            >
-                              {user.profile?.fullName?.charAt(0) ||
-                                user.email.charAt(0).toUpperCase()}
-                            </div>
+                            }}
+                          >
+                            {user.profile?.profileImageUrl ? (
+                              <>
+                                <img
+                                  src={getProfileImageUrl(
+                                    user.profile.profileImageUrl,
+                                  )}
+                                  alt={user.profile.fullName}
+                                  className="w-full h-full object-cover"
+                                  onError={handleImageError}
+                                />
+                                <div className="hidden w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full items-center justify-center text-white font-bold">
+                                  {user.profile?.fullName?.charAt(0) || "U"}
+                                </div>
+                              </>
+                            ) : (
+                              <div
+                                className="w-full h-full bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold cursor-pointer"
+                                onClick={() =>
+                                  openImageModal(
+                                    null,
+                                    user.profile?.fullName || user.email,
+                                  )
+                                }
+                              >
+                                {user.profile?.fullName?.charAt(0) ||
+                                  user.email.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-text-primary">
+                            {user.profile?.fullName || "No Name"}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-text-secondary">
+                            <Mail className="w-3 h-3" />
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">{getRoleBadge(user.role)}</td>
+                    <td className="py-4 px-6">
+                      <div className="space-y-1">
+                        {user.profile?.department && (
+                          <div className="text-xs text-text-primary flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3 text-text-secondary" />
+                            <span>{user.profile.department}</span>
+                          </div>
+                        )}
+                        {user.profile?.university && (
+                          <div className="text-xs text-text-secondary">
+                            {user.profile.university}
+                          </div>
+                        )}
+                        {user.profile?.year && (
+                          <div className="text-xs text-text-secondary flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-text-secondary" />
+                            <span>Year {user.profile.year}</span>
+                          </div>
+                        )}
+                        {!user.profile?.department &&
+                          !user.profile?.university &&
+                          !user.profile?.year && (
+                            <span className="text-sm text-text-secondary">
+                              Not specified
+                            </span>
                           )}
-                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-text-primary">
-                          {user.profile?.fullName || "No Name"}
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-text-secondary">
-                          <Mail className="w-3 h-3" />
-                          {user.email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">{getRoleBadge(user.role)}</td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm text-text-primary">
-                      {user.profile?.department || "Not specified"}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm text-text-primary">
-                      {user.profile?.university || "Not specified"}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm text-text-primary">
-                      {user.profile?.year || "Not specified"}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        user.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {user.isActive ? (
-                        <>
-                          <UserCheck className="w-3 h-3" />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <UserX className="w-3 h-3" />
-                          Inactive
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-1 text-sm text-text-secondary">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(user.createdAt), "MMM d, yyyy")}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
-                      >
-                        <Edit className="w-3 h-3" />
-                        Edit
-                      </button>
-
-                      {/* Change Password Button */}
-                      <button
-                        onClick={() => handleChangePassword(user)}
-                        className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center gap-1"
-                      >
-                        <Key className="w-3 h-3" />
-                        Password
-                      </button>
-
-                      {/* Make Admin Button (only for non-admins) */}
-                      {user.role !== "ADMIN" ? (
-                        <button
-                          onClick={() =>
-                            handleRoleChangeClick(user, "make-admin")
-                          }
-                          className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors"
-                        >
-                          Make Admin
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            handleRoleChangeClick(user, "make-student")
-                          }
-                          className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
-                        >
-                          Make Student
-                        </button>
-                      )}
-
-                      {/* Activate/Deactivate Button */}
-                      <button
-                        onClick={() =>
-                          handleToggleStatus(user.id, user.isActive)
-                        }
-                        className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                    </td>
+                    <td className="py-4 px-6">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                           user.isActive
-                            ? "bg-red-100 text-red-800 hover:bg-red-200"
-                            : "bg-green-100 text-green-800 hover:bg-green-200"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
                         {user.isActive ? (
                           <>
-                            <UserX className="w-3 h-3" />
-                            Deactivate
+                            <UserCheck className="w-3 h-3" />
+                            Active
                           </>
                         ) : (
                           <>
-                            <UserCheck className="w-3 h-3" />
-                            Activate
+                            <UserX className="w-3 h-3" />
+                            Inactive
                           </>
                         )}
-                      </button>
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
+                        >
+                          <Edit className="w-3 h-3" />
+                          Edit
+                        </button>
+
+                        {/* Change Password Button */}
+                        <button
+                          onClick={() => handleChangePassword(user)}
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center gap-1"
+                        >
+                          <Key className="w-3 h-3" />
+                          Password
+                        </button>
+
+                        {/* Make Admin Button (only for non-admins) */}
+                        {user.role !== "ADMIN" ? (
+                          <button
+                            onClick={() =>
+                              handleRoleChangeClick(user, "make-admin")
+                            }
+                            className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors"
+                          >
+                            Make Admin
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              handleRoleChangeClick(user, "make-student")
+                            }
+                            className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
+                          >
+                            Make Student
+                          </button>
+                        )}
+
+                        {/* Activate/Deactivate Button */}
+                        <button
+                          onClick={() =>
+                            handleToggleStatus(user.id, user.isActive)
+                          }
+                          className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            user.isActive
+                              ? "bg-red-100 text-red-800 hover:bg-red-200"
+                              : "bg-green-100 text-green-800 hover:bg-green-200"
+                          }`}
+                        >
+                          {user.isActive ? (
+                            <>
+                              <UserX className="w-3 h-3" />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-3 h-3" />
+                              Activate
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <UserCheck className="w-8 h-8 text-gray-400" />
                     </div>
+                    <h3 className="text-lg font-medium text-text-primary mb-2">
+                      No users found
+                    </h3>
+                    <p className="text-text-secondary">
+                      {searchTerm || selectedRole
+                        ? "Try adjusting your filters"
+                        : "Register students to get started"}
+                    </p>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
-
-        {/* Empty State */}
-        {filteredUsers.length === 0 && (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserCheck className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-text-primary mb-2">
-              No users found
-            </h3>
-            <p className="text-text-secondary">
-              {searchTerm || selectedRole
-                ? "Try adjusting your filters"
-                : "Register students to get started"}
-            </p>
-          </div>
-        )}
 
         {/* Pagination */}
         {pagination.pages > 1 && (

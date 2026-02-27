@@ -49,7 +49,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
       }
     } catch (error) {
       // console.error("Failed to load questions:", error);
-      toast.error("Failed to load questions");
+      // toast.error("Failed to load questions");
     } finally {
       setLoading(false);
     }
@@ -73,15 +73,11 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.success("Question added successfully!");
         loadQuestions();
         loadStats();
-      } else {
-        toast.error(response.data.error || "Failed to add question");
       }
     } catch (error) {
       // console.error("Failed to create question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to add question");
       }
     }
   };
@@ -90,21 +86,17 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
     try {
       const response = await adminService.updateQuestion(
         questionId,
-        questionData
+        questionData,
       );
       if (response.data.success) {
         toast.success("Question updated successfully!");
         loadQuestions();
         loadStats();
-      } else {
-        toast.error(response.data.error || "Failed to update question");
       }
     } catch (error) {
       // console.error("Failed to update question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to update question");
       }
     }
   };
@@ -120,15 +112,11 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.success("Question deleted successfully!");
         loadQuestions();
         loadStats();
-      } else {
-        toast.error(response.data.error || "Failed to delete question");
       }
     } catch (error) {
       // console.error("Failed to delete question:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to delete question");
       }
     }
   };
@@ -140,15 +128,11 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
         toast.success(response.data.message);
         loadQuestions();
         loadStats();
-      } else {
-        toast.error(response.data.error || "Failed to import questions");
       }
     } catch (error) {
       // console.error("Failed to import questions:", error);
       if (error.response?.data?.error) {
         toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to import questions");
       }
     }
   };
@@ -251,8 +235,8 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
                         diff.difficulty === "EASY"
                           ? "bg-green-500"
                           : diff.difficulty === "MEDIUM"
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
                       }`}
                     ></div>
                     <span className="text-sm text-text-primary capitalize">
@@ -266,7 +250,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
                     <span className="text-xs text-text-secondary">
                       (
                       {Math.round(
-                        (diff.count / stats.stats.totalQuestions) * 100
+                        (diff.count / stats.stats.totalQuestions) * 100,
                       )}
                       %)
                     </span>
@@ -298,7 +282,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
             >
               {stats.stats.bySubject.map((subject, index) => {
                 const percentage = Math.round(
-                  (subject.count / stats.stats.totalQuestions) * 100
+                  (subject.count / stats.stats.totalQuestions) * 100,
                 );
                 return (
                   <div key={index} className="pr-1">
@@ -428,9 +412,9 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
                   headers
                     .map(
                       (header) =>
-                        `"${String(row[header] || "").replace(/"/g, '""')}"`
+                        `"${String(row[header] || "").replace(/"/g, '""')}"`,
                     )
-                    .join(",")
+                    .join(","),
                 ),
               ];
 
@@ -469,7 +453,7 @@ export const QuestionBank = ({ examId, examTitle, onClose }) => {
                       </span>
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded ${getDifficultyColor(
-                          question.difficulty
+                          question.difficulty,
                         )}`}
                       >
                         {question.difficulty}
