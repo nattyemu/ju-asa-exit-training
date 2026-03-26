@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { authService } from "../services/authService";
+import api from "../services/api";
 
 const AuthContext = createContext({});
 
@@ -20,16 +21,37 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const initializeAuth = () => {
       try {
+        const token = localStorage.getItem("token");
         const currentUser = authService.getCurrentUser();
-        if (currentUser) {
+
+        // Check if token exists and user exists
+        if (token && currentUser) {
           setUser(currentUser);
+          setIsAuthenticated(true);
+          // Set token in axios defaults
+          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        } else {
+          // Clear any stale data
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUser(null);
+          setIsAuthenticated(false);
+          // Remove axios header if exists
+          delete api.defaults.headers.common["Authorization"];
         }
       } catch (error) {
-        // console.error("Error initializing auth:", error);
+        console.error("Error initializing auth:", error);
+        // Clear on error
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsAuthenticated(false);
+        delete api.defaults.headers.common["Authorization"];
       } finally {
         setLoading(false);
       }
@@ -44,11 +66,12 @@ export const AuthProvider = ({ children }) => {
 
       if (result.success) {
         setUser(result.data.user);
+        setIsAuthenticated(true);
         return { success: true, message: "Login successful" };
       }
       return { success: false, message: result.message || "Login failed" };
     } catch (error) {
-      // console.error("AuthContext.login error:", error);
+      console.error("AuthContext.login error:", error);
       return {
         success: false,
         message:
@@ -61,8 +84,11 @@ export const AuthProvider = ({ children }) => {
     try {
       authService.logout();
       setUser(null);
+      setIsAuthenticated(false);
+      // Clear axios headers
+      delete api.defaults.headers.common["Authorization"];
     } catch (error) {
-      // console.error("Error during logout:", error);
+      console.error("Error during logout:", error);
     }
   }, []);
 
@@ -84,10 +110,11 @@ export const AuthProvider = ({ children }) => {
 
       // Update state
       setUser(updatedUser);
+      setIsAuthenticated(true);
 
       return updatedUser;
     } catch (error) {
-      // console.error("Error updating user profile:", error);
+      console.error("Error updating user profile:", error);
       throw error;
     }
   };
@@ -97,8 +124,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loading,
+    isAuthenticated,
     updateUserProfile,
-    isAuthenticated: !!user,
     isAdmin: user?.role === "ADMIN",
     isStudent: user?.role === "STUDENT",
   };

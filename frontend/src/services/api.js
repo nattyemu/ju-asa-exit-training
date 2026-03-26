@@ -43,14 +43,30 @@ api.interceptors.response.use(
       const now = Date.now();
       const config = error.config || {};
 
-      // Check if we should show toast
-      const shouldShowToast =
-        !config.suppressNetworkErrorToast &&
-        now - lastNetworkErrorTime > NETWORK_ERROR_DEBOUNCE_MS;
+      // Check if it's a timeout error
+      const isTimeoutError =
+        error.code === "ECONNABORTED" || error.message?.includes("timeout");
 
-      if (shouldShowToast) {
-        toast.error("Network error. Please check your connection.");
-        lastNetworkErrorTime = now;
+      // Skip toast for timeout errors completely
+      if (!isTimeoutError) {
+        // Use a unique key to prevent duplicate toasts for same error
+        const errorKey = error.message || "network_error";
+        const lastErrorTime = localStorage.getItem(`last_error_${errorKey}`);
+        const currentTime = Date.now();
+
+        const shouldShowToast =
+          !config.suppressNetworkErrorToast &&
+          (!lastErrorTime ||
+            currentTime - parseInt(lastErrorTime) > NETWORK_ERROR_DEBOUNCE_MS);
+
+        if (shouldShowToast) {
+          // toast.error("Network error. Please check your connection.");
+          localStorage.setItem(
+            `last_error_${errorKey}`,
+            currentTime.toString(),
+          );
+          lastNetworkErrorTime = now;
+        }
       }
 
       return Promise.reject(error);

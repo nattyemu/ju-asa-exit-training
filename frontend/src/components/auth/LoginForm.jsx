@@ -258,7 +258,7 @@ export const LoginForm = () => {
             <p className="text-sm text-amber-800">
               <span className="font-semibold">Important:</span> Student
               registration is managed by administrators only. If you need
-              account access, please contact your department administrator.
+              account access, please contact JU ASA administrator.
             </p>
           </div>
         </div>
