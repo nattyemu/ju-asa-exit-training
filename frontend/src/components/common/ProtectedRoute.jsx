@@ -37,13 +37,7 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const hasRequiredRole = allowedRoles.includes(user.role);
 
     if (!hasRequiredRole) {
-      if (user.role === "ADMIN") {
-        return <Navigate to="/dashboard" replace />;
-      } else if (user.role === "STUDENT") {
-        return <Navigate to="/dashboard" replace />;
-      } else {
-        return <Navigate to="/dashboard" replace />;
-      }
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
