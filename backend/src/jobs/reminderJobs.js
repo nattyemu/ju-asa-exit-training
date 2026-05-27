@@ -6,15 +6,15 @@ import { db } from "../db/connection.js";
  * Schedule automatic notifications
  */
 export const scheduleNotificationJobs = () => {
-  // console.log("📅 Scheduling notification jobs...");
+  // console.log("Scheduling notification jobs...");
 
   // 1. Daily exam reminders at 9 AM (for exams starting in next 24 hours)
   cron.schedule("0 9 * * *", async () => {
-    // console.log("⏰ Running daily exam reminders...");
+    // console.log("Running daily exam reminders...");
     try {
       const result = await sendExamReminders();
       // console.log(
-      //   `✅ Sent ${result.data?.totalRemindersSent || 0} exam reminders`
+      //   `Sent ${result.data?.totalRemindersSent || 0} exam reminders`
       // );
     } catch (error) {
       // console.error("❌ Exam reminders job failed:", error.message);
@@ -25,16 +25,16 @@ export const scheduleNotificationJobs = () => {
 
   // 3. Cleanup job - log sent notifications (weekly)
   cron.schedule("0 0 * * 0", async () => {
-    // console.log("🧹 Running weekly cleanup...");
+    // console.log("Running weekly cleanup...");
     try {
       // In a real system, you'd clean up old notification logs
-      // console.log("✅ Cleanup completed");
+      // console.log("Cleanup completed");
     } catch (error) {
-      // console.error("❌ Cleanup job failed:", error.message);
+      // console.error("Cleanup job failed:", error.message);
     }
   });
 
-  // console.log("✅ Notification jobs scheduled successfully");
+  // console.log("Notification jobs scheduled successfully");
   // console.log("   - Daily exam reminders: 9:00 AM");
   // console.log("   - Weekly cleanup: Sunday midnight");
   // console.log("   - Unstarted exam reminders: Manual only (admin triggered)");
