@@ -4,7 +4,7 @@
 export const calculateRemainingTime = (
   startedAt,
   durationMinutes,
-  availableUntil
+  availableUntil,
 ) => {
   try {
     const now = new Date();
@@ -15,7 +15,7 @@ export const calculateRemainingTime = (
 
     // Calculate end time based on duration
     const endTimeByDuration = new Date(
-      started.getTime() + durationMinutes * 60000
+      started.getTime() + durationMinutes * 60000,
     );
 
     // Use whichever comes first: duration end or availability deadline
@@ -40,7 +40,7 @@ export const calculateRemainingTime = (
 
     const hours = Math.floor(totalRemainingMs / (1000 * 60 * 60));
     const minutes = Math.floor(
-      (totalRemainingMs % (1000 * 60 * 60)) / (1000 * 60)
+      (totalRemainingMs % (1000 * 60 * 60)) / (1000 * 60),
     );
     const seconds = Math.floor((totalRemainingMs % (1000 * 60)) / 1000);
     return {
@@ -80,11 +80,6 @@ export const shouldAutoSubmit = (studentExam, exam) => {
 
     const startedAt = new Date(studentExam.startedAt);
     const availableUntilDate = new Date(exam.availableUntil);
-
-    // console.log("Parsed dates:", {
-    //   startedAt: startedAt.toISOString(),
-    //   availableUntilDate: availableUntilDate.toISOString(),
-    // });
 
     // Check if duration has expired
     const durationEnd = new Date(startedAt.getTime() + exam.duration * 60000);
