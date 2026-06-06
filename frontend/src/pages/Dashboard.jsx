@@ -266,26 +266,11 @@ export const Dashboard = () => {
         // Get exams from response
         const examsData = response.data.data.exams || [];
 
-        // DEBUG: Check exam dates
-        examsData.forEach((exam, index) => {
-          // console.log(`Exam ${index + 1}:`, {
-          //   id: exam.id,
-          //   title: exam.title,
-          //   createdAt: exam.createdAt,
-          //   availableFrom: exam.availableFrom,
-          //   availableUntil: exam.availableUntil,
-          // });
-        });
-
         // Sort exams by createdAt in descending order (newest first)
         const sortedExams = examsData.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);
-          // console.log(
-          //   `Sorting: ${a.id} (${dateA}) vs ${b.id} (${dateB}) = ${
-          //     dateB - dateA
-          //   }`
-          // );
+
           return dateB - dateA;
         });
 
