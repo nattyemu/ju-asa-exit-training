@@ -244,7 +244,7 @@ export const Dashboard = () => {
         error.response?.status === 400 &&
         error.response.data.message?.includes("already completed")
       ) {
-        toast.error("You have already completed this exam");
+        toast.info("You have already completed this exam");
         navigate(`/results`, {
           state: { examId: exam.id, examData: exam },
         });
