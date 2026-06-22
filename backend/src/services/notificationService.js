@@ -12,26 +12,18 @@ import {
  */
 export const sendExamReminders = async (examId = null) => {
   try {
-    // console.log("=== STARTING EXAM REMINDERS ===");
-    // console.log("Exam ID parameter:", examId);
-
     const now = new Date();
     const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-    // console.log("Current time:", now.toISOString());
-    // console.log("24 hours from now:", oneDayFromNow.toISOString());
-
     // Build the query conditions
     let examConditions = and(
       eq(exams.isActive, true),
-      gt(exams.availableFrom, now), // Exam hasn't started yet
-      lte(exams.availableFrom, oneDayFromNow) // Will start within 24 hours
+      gt(exams.availableFrom, now),
+      lte(exams.availableFrom, oneDayFromNow),
     );
 
     // If specific exam is requested, filter by it
     if (examId && examId !== "all") {
       examConditions = and(examConditions, eq(exams.id, parseInt(examId)));
-      // console.log("Filtering by specific exam ID:", examId);
     }
 
     // Find exams starting soon (in the next 24 hours)
@@ -88,15 +80,15 @@ export const sendExamReminders = async (examId = null) => {
           studentExams,
           and(
             eq(studentExams.studentId, users.id),
-            eq(studentExams.examId, exam.id)
-          )
+            eq(studentExams.examId, exam.id),
+          ),
         )
         .where(
           and(
             eq(users.role, "STUDENT"),
             eq(users.isActive, true),
-            isNull(studentExams.id) // Haven't taken the exam yet
-          )
+            isNull(studentExams.id), // Haven't taken the exam yet
+          ),
         );
 
       // console.log(
@@ -214,8 +206,8 @@ export const sendUnstartedExamReminders = async (examId) => {
           eq(exams.id, Number(examId)),
           eq(exams.isActive, true),
           lte(exams.availableFrom, now),
-          gt(exams.availableUntil, now)
-        )
+          gt(exams.availableUntil, now),
+        ),
       )
       .limit(1);
 
@@ -240,15 +232,15 @@ export const sendUnstartedExamReminders = async (examId) => {
         studentExams,
         and(
           eq(studentExams.studentId, users.id),
-          eq(studentExams.examId, exam.id)
-        )
+          eq(studentExams.examId, exam.id),
+        ),
       )
       .where(
         and(
           eq(users.role, "STUDENT"),
           eq(users.isActive, true),
-          isNull(studentExams.id)
-        )
+          isNull(studentExams.id),
+        ),
       );
 
     let sent = 0;
@@ -309,8 +301,8 @@ export const getUnstartedExamStats = async () => {
         and(
           eq(exams.isActive, true),
           lte(exams.availableFrom, now), // Exam has started
-          gt(exams.availableUntil, now) // Exam hasn't ended yet
-        )
+          gt(exams.availableUntil, now), // Exam hasn't ended yet
+        ),
       );
 
     // console.log(`Found ${activeExams.length} active exams`);
@@ -336,15 +328,15 @@ export const getUnstartedExamStats = async () => {
           studentExams,
           and(
             eq(studentExams.studentId, users.id),
-            eq(studentExams.examId, exam.id)
-          )
+            eq(studentExams.examId, exam.id),
+          ),
         )
         .where(
           and(
             eq(users.role, "STUDENT"),
             eq(users.isActive, true),
-            isNull(studentExams.id) // Haven't started (no studentExams record)
-          )
+            isNull(studentExams.id), // Haven't started (no studentExams record)
+          ),
         );
 
       const unstartedCount = unstartedStudentsResult[0]?.count || 0;
@@ -393,7 +385,7 @@ export const getUnstartedExamStats = async () => {
 const formatTimeLeft = (endTime, currentTime) => {
   const timeLeft = Math.max(
     0,
-    Math.floor((new Date(endTime) - currentTime) / (60 * 1000))
+    Math.floor((new Date(endTime) - currentTime) / (60 * 1000)),
   );
 
   if (timeLeft > 120) {
