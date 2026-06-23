@@ -39,11 +39,8 @@ export const sendExamReminders = async (examId = null) => {
       .from(exams)
       .where(examConditions);
 
-  
-
     // If no exams found
     if (upcomingExams.length === 0) {
-      // console.log("❌ No upcoming exams found matching criteria");
       return {
         success: true,
         message: "No upcoming exams found in the next 24 hours",
@@ -60,9 +57,6 @@ export const sendExamReminders = async (examId = null) => {
     const results = [];
 
     for (const exam of upcomingExams) {
-      // console.log(`\n=== Processing exam: ${exam.title} (ID: ${exam.id}) ===`);
-
-      // Find students who haven't taken this exam yet
       const studentsToNotify = await db
         .select({
           userId: users.id,
