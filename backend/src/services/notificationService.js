@@ -39,12 +39,7 @@ export const sendExamReminders = async (examId = null) => {
       .from(exams)
       .where(examConditions);
 
-    // console.log(`Found ${upcomingExams.length} upcoming exams:`);
-    upcomingExams.forEach((exam) => {
-      // console.log(`- Exam ${exam.id}: "${exam.title}"`);
-      // console.log(`  Starts: ${exam.availableFrom}`);
-      // console.log(`  Ends: ${exam.availableUntil}`);
-    });
+  
 
     // If no exams found
     if (upcomingExams.length === 0) {
