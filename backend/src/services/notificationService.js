@@ -80,10 +80,6 @@ export const sendExamReminders = async (examId = null) => {
           ),
         );
 
-      // console.log(
-      //   `Found ${studentsToNotify.length} students who haven't taken this exam yet`
-      // );
-
       if (studentsToNotify.length === 0) {
         // console.log(
         //   "ℹ️ No students need reminders for this exam (all have taken it or no active students)"
@@ -147,11 +143,7 @@ export const sendExamReminders = async (examId = null) => {
     const successful = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success).length;
 
-    // console.log(`\n=== COMPLETED ===`);
-    // console.log(`Total reminders sent: ${results.length}`);
-    // console.log(`Successful: ${successful}`);
-    // console.log(`Failed: ${failed}`);
-
+ 
     return {
       success: true,
       message: `Processed ${upcomingExams.length} exam(s). Sent ${successful} reminders successfully. ${failed} failed.`,
@@ -260,7 +252,6 @@ export const sendUnstartedExamReminders = async (examId) => {
       },
     };
   } catch (error) {
-    // console.error("❌ sendUnstartedExamReminders error:", error);
     return {
       success: false,
       message: error.message,
@@ -268,16 +259,13 @@ export const sendUnstartedExamReminders = async (examId) => {
   }
 };
 
-/**
- * Get statistics for unstarted students in active exams
- */
+
 export const getUnstartedExamStats = async () => {
   try {
     // console.log("=== GETTING UNSTARTED EXAM STATS ===");
 
     const now = new Date();
 
-    // Get all active exams (currently available)
     const activeExams = await db
       .select({
         id: exams.id,
