@@ -14,7 +14,7 @@ export const calculateRank = async (
   examId,
   studentExamId,
   studentScore,
-  timeSpent
+  timeSpent,
 ) => {
   try {
     // Get all results with student identity
@@ -40,7 +40,6 @@ export const calculateRank = async (
 
     return allResults.length + 1; // If not found
   } catch (error) {
-    // console.error("Error calculating rank:", error);
     throw new Error("Failed to calculate ranking");
   }
 };

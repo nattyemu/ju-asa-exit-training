@@ -7,7 +7,7 @@ import { eq, and, gte, desc, sql } from "drizzle-orm";
  */
 export const getEnhancedStudentProgress = async (
   studentId,
-  timeRange = "month"
+  timeRange = "month",
 ) => {
   try {
     const now = new Date();
@@ -46,8 +46,8 @@ export const getEnhancedStudentProgress = async (
       .where(
         and(
           eq(studentExams.studentId, studentId),
-          gte(studentExams.startedAt, startDate)
-        )
+          gte(studentExams.startedAt, startDate),
+        ),
       )
       .orderBy(desc(studentExams.startedAt));
 
@@ -115,8 +115,8 @@ export const getEnhancedStudentProgress = async (
             improvement > 0
               ? "improving"
               : improvement < 0
-              ? "declining"
-              : "stable",
+                ? "declining"
+                : "stable",
         },
         recentActivity: examHistory.slice(0, 5).map((exam) => ({
           exam: exam.title,
@@ -165,11 +165,11 @@ export const getLeaderboard = async (timeRange = "month", limit = 10) => {
         fullName: profiles.fullName,
         department: profiles.department,
         examsTaken: sql`COUNT(DISTINCT ${studentExams.examId})`.as(
-          "exams_taken"
+          "exams_taken",
         ),
         averageScore: sql`ROUND(AVG(${results.score}), 2)`.as("average_score"),
         totalStudyTime: sql`SUM(${studentExams.timeSpent})`.as(
-          "total_study_time"
+          "total_study_time",
         ),
       })
       .from(studentExams)
@@ -221,8 +221,8 @@ export const getStudyTimeAnalytics = async (studentId) => {
       .where(
         and(
           eq(studentExams.studentId, studentId),
-          sql`${studentExams.submittedAt} IS NOT NULL`
-        )
+          sql`${studentExams.submittedAt} IS NOT NULL`,
+        ),
       )
       .groupBy(sql`DATE(${studentExams.startedAt})`)
       .orderBy(sql`DATE(${studentExams.startedAt}) DESC`)
@@ -230,7 +230,7 @@ export const getStudyTimeAnalytics = async (studentId) => {
 
     const totalStudyTime = studyData.reduce(
       (sum, day) => sum + (parseInt(day.totalTime) || 0),
-      0
+      0,
     );
     const averageDailyTime =
       studyData.length > 0 ? totalStudyTime / studyData.length : 0;
@@ -253,7 +253,6 @@ export const getStudyTimeAnalytics = async (studentId) => {
       },
     };
   } catch (error) {
-    // console.error("Study time analytics error:", error);
     return {
       success: false,
       error: error.message,
