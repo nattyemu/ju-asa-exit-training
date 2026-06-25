@@ -326,7 +326,7 @@ const getSubjectMasteryAcrossAllExams = async (studentId) => {
         )
       )
       .groupBy(questions.subject)
-      .having(sql`COUNT(*) >= 5`); // Include all subjects, even with 5+ question
+      .having(sql`COUNT(*) >= 5`); 
 
     return subjectMastery;
   } catch (error) {
