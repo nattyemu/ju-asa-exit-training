@@ -92,15 +92,7 @@ export const sendExamReminders = async (examId = null) => {
         .from(users)
         .where(and(eq(users.role, "STUDENT"), eq(users.isActive, true)));
 
-      // console.log(
-      //   `Total active students in system: ${totalActiveStudents[0]?.count || 0}`
-      // );
-
       for (const student of studentsToNotify) {
-        // console.log(
-        //   `Sending reminder to: ${student.fullName} (${student.email})`
-        // );
-
         try {
           const emailResult = await sendExamReminder(student.email, {
             studentName: student.fullName,
@@ -109,10 +101,6 @@ export const sendExamReminders = async (examId = null) => {
             endTime: exam.availableUntil,
             duration: exam.duration,
           });
-
-          // console.log(
-          //   `Email result: ${emailResult.success ? "✅ Success" : "❌ Failed"}`
-          // );
 
           results.push({
             examId: exam.id,
@@ -143,7 +131,6 @@ export const sendExamReminders = async (examId = null) => {
     const successful = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success).length;
 
- 
     return {
       success: true,
       message: `Processed ${upcomingExams.length} exam(s). Sent ${successful} reminders successfully. ${failed} failed.`,
@@ -230,7 +217,7 @@ export const sendUnstartedExamReminders = async (examId) => {
     for (const student of studentsToNotify) {
       try {
         await sendUnstartedExamReminder(student.email, {
-          studentName: "Student", // safe fallback
+          studentName: "Student",
           examTitle: exam.title,
           endTime: exam.availableUntil,
         });
@@ -259,7 +246,6 @@ export const sendUnstartedExamReminders = async (examId) => {
   }
 };
 
-
 export const getUnstartedExamStats = async () => {
   try {
     // console.log("=== GETTING UNSTARTED EXAM STATS ===");
@@ -277,8 +263,8 @@ export const getUnstartedExamStats = async () => {
       .where(
         and(
           eq(exams.isActive, true),
-          lte(exams.availableFrom, now), // Exam has started
-          gt(exams.availableUntil, now), // Exam hasn't ended yet
+          lte(exams.availableFrom, now),
+          gt(exams.availableUntil, now),
         ),
       );
 
