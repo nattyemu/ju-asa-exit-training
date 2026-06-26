@@ -312,7 +312,7 @@ export const getExamRankings = async (req, res) => {
       },
     });
   } catch (error) {
-    // console.error("Get exam rankings error:", error);
+    
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve exam rankings",
