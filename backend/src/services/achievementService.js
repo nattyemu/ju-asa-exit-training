@@ -83,7 +83,7 @@ export const checkImmediateAchievements = async (
     const totalStudyTime = parseInt(stats.total_study_time) || 0;
     const topRankCount = parseInt(stats.top_rank_count) || 0;
 
-    // Check quick_learner (for this specific exam)
+    
     const isQuickLearner = session.timeSpent <= session.examDuration / 2;
 
     // Check subject_master (for this specific exam)
