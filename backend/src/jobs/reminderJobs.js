@@ -6,7 +6,7 @@ import { db } from "../db/connection.js";
  * Schedule automatic notifications
  */
 export const scheduleNotificationJobs = () => {
-  // console.log("Scheduling notification jobs...");
+  
 
   // 1. Daily exam reminders at 9 AM (for exams starting in next 24 hours)
   cron.schedule("0 9 * * *", async () => {
