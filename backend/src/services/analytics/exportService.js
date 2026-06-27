@@ -866,7 +866,7 @@ export const exportCompleteReport = async (
       };
     }
   } catch (error) {
-    // console.error("Export complete report error:", error);
+
     return {
       success: false,
       error: error.message || "Failed to export complete report",
