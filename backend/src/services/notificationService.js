@@ -85,8 +85,6 @@ export const sendExamReminders = async (examId = null) => {
         //   "ℹ️ No students need reminders for this exam (all have taken it or no active students)"
         // );
       }
-
-      // Also check: How many total active students are there?
       const totalActiveStudents = await db
         .select({ count: count() })
         .from(users)
