@@ -774,7 +774,6 @@ export const checkAchievementsAfterSubmission = async (
     // Delayed achievements will be checked when user views progress page
     return await checkImmediateAchievements(studentId, examSessionId);
   } catch (error) {
-    // console.error("Check achievements after submission error:", error);
     return {
       success: false,
       error: error.message,
