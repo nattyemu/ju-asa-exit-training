@@ -322,8 +322,6 @@ export const getUnstartedExamStats = async () => {
             ? Math.round((startedCount / totalActiveStudents) * 100)
             : 0,
       });
-
-      // console.log(`Exam "${exam.title}": ${unstartedCount} unstarted out of ${totalActiveStudents} students`);
     }
 
     return {
@@ -335,7 +333,6 @@ export const getUnstartedExamStats = async () => {
       },
     };
   } catch (error) {
-    // console.error("❌ Get unstarted exam stats error:", error);
     return {
       success: false,
       error: error.message,
@@ -451,8 +448,6 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
  * Get user notification preferences (simplified - always enabled for now)
  */
 export const getUserNotificationPreferences = async (userId) => {
-  // In a real system, you'd store preferences in database
-  // For now, return default preferences
   return {
     emailNotifications: true,
     examReminders: true,
