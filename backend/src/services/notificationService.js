@@ -383,8 +383,6 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
       .leftJoin(profiles, eq(users.id, profiles.userId))
       .where(eq(users.isActive, true));
 
-    // console.log(`Sending announcement to ${allUsers.length} users`);
-
     const results = [];
 
     for (const user of allUsers) {
@@ -405,10 +403,6 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
           sentAt: new Date(),
         });
       } catch (emailError) {
-        // console.error(
-        //   `Failed to send announcement to ${user.email}:`,
-        //   emailError
-        // );
         results.push({
           userId: user.userId,
           email: user.email,
@@ -436,7 +430,6 @@ export const sendSystemAnnouncementToAll = async (announcementData) => {
       },
     };
   } catch (error) {
-    // console.error("System announcement error:", error);
     return {
       success: false,
       error: error.message,
