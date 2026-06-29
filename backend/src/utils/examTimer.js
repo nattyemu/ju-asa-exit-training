@@ -141,7 +141,6 @@ export const calculateTimeSpent = (startedAt, submittedAt = new Date()) => {
     const timeSpentMs = submitted - started;
     return Math.floor(timeSpentMs / (1000 * 60)); // Convert to minutes
   } catch (error) {
-    // console.error("Error calculating time spent:", error);
     return 0;
   }
 };
