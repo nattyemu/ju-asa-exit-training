@@ -11,7 +11,7 @@ export const createExamSchema = z
       .min(10, "Description must be at least 10 characters")
       .optional()
       .or(z.literal(""))
-      .transform((val) => (val === "" ? undefined : val)), // Handle empty string
+      .transform((val) => (val === "" ? undefined : val)),
     availableFrom: z
       .string()
       .min(1, "Available from date is required")
@@ -27,18 +27,17 @@ export const createExamSchema = z
         {
           message:
             "Invalid date format. Use ISO format like: 2024-06-01T00:00:00.000Z",
-        }
+        },
       )
       .refine(
         (date) => {
           const d = new Date(date);
           const now = new Date();
-          // Allow dates up to 1 minute in the past to account for small time differences
           return d > new Date(now.getTime() - 60000);
         },
         {
           message: "Available from date must be in the future",
-        }
+        },
       ),
     availableUntil: z
       .string()
@@ -55,7 +54,7 @@ export const createExamSchema = z
         {
           message:
             "Invalid date format. Use ISO format like: 2024-06-30T23:59:59.000Z",
-        }
+        },
       ),
     duration: z
       .number()
@@ -83,7 +82,7 @@ export const createExamSchema = z
     {
       message: "Available until date must be after available from date",
       path: ["availableUntil"],
-    }
+    },
   );
 
 export const updateExamSchema = z
@@ -113,7 +112,7 @@ export const updateExamSchema = z
         {
           message:
             "Invalid date format. Use ISO format like: 2024-06-01T00:00:00.000Z",
-        }
+        },
       )
       .optional(),
     availableUntil: z
@@ -130,7 +129,7 @@ export const updateExamSchema = z
         {
           message:
             "Invalid date format. Use ISO format like: 2024-06-30T23:59:59.000Z",
-        }
+        },
       )
       .optional(),
     duration: z
@@ -164,7 +163,7 @@ export const updateExamSchema = z
     {
       message: "Available until date must be after available from date",
       path: ["availableUntil"],
-    }
+    },
   );
 
 export const examStatusSchema = z.object({
@@ -180,14 +179,14 @@ export const formatZodError = (error) => {
           field === "availableFrom"
             ? "Available from date"
             : field === "availableUntil"
-            ? "Available until date"
-            : field === "totalQuestions"
-            ? "Total questions"
-            : field === "passingScore"
-            ? "Passing score"
-            : field === "description"
-            ? "Description"
-            : field.charAt(0).toUpperCase() + field.slice(1);
+              ? "Available until date"
+              : field === "totalQuestions"
+                ? "Total questions"
+                : field === "passingScore"
+                  ? "Passing score"
+                  : field === "description"
+                    ? "Description"
+                    : field.charAt(0).toUpperCase() + field.slice(1);
         return `${fieldName}: ${issue.message}`;
       }
       return issue.message;

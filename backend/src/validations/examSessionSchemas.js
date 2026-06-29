@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Start exam session schema
 export const startExamSessionSchema = z.object({
   examId: z
     .number({
@@ -11,7 +10,6 @@ export const startExamSessionSchema = z.object({
     .positive("Exam ID must be a positive number"),
 });
 
-// Save answer schema
 export const saveAnswerSchema = z.object({
   questionId: z
     .number({
@@ -26,7 +24,6 @@ export const saveAnswerSchema = z.object({
   isAutosave: z.boolean().default(false),
 });
 
-// Save multiple answers schema
 export const saveMultipleAnswersSchema = z.object({
   answers: z
     .array(
@@ -41,7 +38,7 @@ export const saveMultipleAnswersSchema = z.object({
         chosenAnswer: z.enum(["A", "B", "C", "D"], {
           errorMap: () => ({ message: "Chosen answer must be A, B, C, or D" }),
         }),
-      })
+      }),
     )
     .min(1, "At least one answer is required")
     .max(100, "Cannot save more than 100 answers at once"),
@@ -63,7 +60,7 @@ export const submitExamSchema = z.object({
         chosenAnswer: z.enum(["A", "B", "C", "D"], {
           errorMap: () => ({ message: "Chosen answer must be A, B, C, or D" }),
         }),
-      })
+      }),
     )
     .optional(),
 });
@@ -80,14 +77,14 @@ export const formatZodError = (error) => {
           field === "examId"
             ? "Exam ID"
             : field === "questionId"
-            ? "Question ID"
-            : field === "chosenAnswer"
-            ? "Chosen answer"
-            : field === "isAutosave"
-            ? "Auto-save flag"
-            : field === "answers"
-            ? "Answers"
-            : field.charAt(0).toUpperCase() + field.slice(1);
+              ? "Question ID"
+              : field === "chosenAnswer"
+                ? "Chosen answer"
+                : field === "isAutosave"
+                  ? "Auto-save flag"
+                  : field === "answers"
+                    ? "Answers"
+                    : field.charAt(0).toUpperCase() + field.slice(1);
         fields.add(fieldName);
       }
     });
