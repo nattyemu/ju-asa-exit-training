@@ -150,7 +150,7 @@ export const setupAutoSubmissionCron = () => {
   
   console.log('⏰ Auto-submission cron job scheduled: every minute');
   */
-  // For now, just export the function
+  
   // console.log(
   //   "⏰ Auto-submission job ready. Call runAutoSubmissionCheck() periodically."
   // );
