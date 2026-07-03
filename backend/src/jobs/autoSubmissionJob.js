@@ -11,9 +11,7 @@ import { autoSubmitExam } from "../controllers/submissionController.js";
 export const runAutoSubmissionCheck = async () => {
   try {
     const now = new Date();
-    // console.log(
-    //   `🔄 [AUTO-CHECK] Running auto-submission check at ${now.toISOString()}`
-    // );
+    
 
     // Find active sessions with answer count
     const activeSessions = await db
