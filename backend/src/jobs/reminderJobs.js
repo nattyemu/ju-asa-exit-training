@@ -34,11 +34,7 @@ export const scheduleNotificationJobs = () => {
     }
   });
 
-  // console.log("Notification jobs scheduled successfully");
-  // console.log("   - Daily exam reminders: 9:00 AM");
-  // console.log("   - Weekly cleanup: Sunday midnight");
-  // console.log("   - Unstarted exam reminders: Manual only (admin triggered)");
-};
+  
 
 // Export for manual triggering
 export const runManualExamReminders = async () => {
