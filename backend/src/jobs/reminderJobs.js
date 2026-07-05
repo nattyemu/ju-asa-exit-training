@@ -13,9 +13,7 @@ export const scheduleNotificationJobs = () => {
     // console.log("Running daily exam reminders...");
     try {
       const result = await sendExamReminders();
-      // console.log(
-      //   `Sent ${result.data?.totalRemindersSent || 0} exam reminders`
-      // );
+      
     } catch (error) {
       // console.error("❌ Exam reminders job failed:", error.message);
     }
