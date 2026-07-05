@@ -119,6 +119,6 @@ export const mapOriginalToShuffled = (originalAnswer, optionMapping) => {
     }
   }
 
-  // console.log("⚠️ No reverse mapping found for:", original);
+  
   return originalAnswer;
 };
