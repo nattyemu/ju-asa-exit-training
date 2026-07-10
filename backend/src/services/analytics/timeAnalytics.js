@@ -160,7 +160,7 @@ export const getSubmissionPattern = async (examId) => {
       },
     };
   } catch (error) {
-    // console.error("Submission pattern error:", error);
+    
     return {
       success: false,
       error: error.message,
