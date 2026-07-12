@@ -12,9 +12,9 @@ try {
   console.log("✅ Database connected successfully!");
 
   db = drizzle(connection);
-  console.log("✅ Drizzle ORM initialized");
+  console.log("Drizzle ORM initialized");
 } catch (error) {
-  console.error("❌ Database connection failed:", error.message);
+  console.error("Database connection failed:", error.message);
   process.exit(1);
 }
 
