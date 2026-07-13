@@ -10,7 +10,7 @@ export const scheduleNotificationJobs = () => {
 
   // 1. Daily exam reminders at 9 AM (for exams starting in next 24 hours)
   cron.schedule("0 9 * * *", async () => {
-    // console.log("Running daily exam reminders...");
+    
     try {
       const result = await sendExamReminders();
       
