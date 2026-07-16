@@ -98,18 +98,18 @@ export const adminService = {
       examId === "" ||
       examId === "all"
     ) {
-      // console.log("📧 Using /all endpoint");
+      // console.log("Using /all endpoint");
       return api.post(`/notifications/reminders/exam/all`);
     }
 
-    // console.log("📧 Using specific exam endpoint for ID:", examId);
+    // console.log("Using specific exam endpoint for ID:", examId);
     return api.post(`/notifications/reminders/exam/${examId}`);
   },
 
   // Notifications - Unstarted Exam Reminders
   sendUnstartedExamReminders: (examId) => {
     // console.log(
-    //   "📝 AdminService: Sending unstarted exam reminders for examId:",
+    //   "AdminService: Sending unstarted exam reminders for examId:",
     //   examId
     // );
 
@@ -121,11 +121,11 @@ export const adminService = {
   },
   // Get unstarted exam statistics
   getUnstartedExamStats: () => {
-    // console.log("📊 Getting unstarted exam statistics");
+    // console.log(" Getting unstarted exam statistics");
     return api.get("/notifications/unstarted-stats");
   },
   sendSystemAnnouncement: (announcement) => {
-    // console.log("📢 Sending system announcement:", announcement.title);
+    // console.log(" Sending system announcement:", announcement.title);
     return api.post("/notifications/announcement", announcement);
   },
 
