@@ -16,7 +16,7 @@ export const examService = {
   // Get detailed results with answers
   getDetailedResult: async (examId) => {
     try {
-      // Try to get detailed results
+      
       return await api.get(`/results/${examId}/detailed`);
     } catch (error) {
       // If detailed endpoint not found (404), try basic endpoint
