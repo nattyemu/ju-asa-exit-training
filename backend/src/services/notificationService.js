@@ -186,8 +186,8 @@ export const sendUnstartedExamReminders = async (examId) => {
 
     const exam = examResult[0];
 
-    // 2️⃣ Get ACTIVE students who have NOT started the exam
-    // ✅ EXACT SAME LOGIC AS STATS
+    // Get ACTIVE students who have NOT started the exam
+    // EXACT SAME LOGIC AS STATS
     const studentsToNotify = await db
       .select({
         userId: users.id,
