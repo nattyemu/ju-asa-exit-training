@@ -87,7 +87,7 @@ export const checkImmediateAchievements = async (
     const isQuickLearner = session.timeSpent <= session.examDuration / 2;
 
     // Check subject_master (for this specific exam)
-    // We need to check if any subject in this exam has ≥90% accuracy
+    
     let subjectMasterData = null;
     if (examScore > 0) {
       // Get subject accuracy for this specific exam
