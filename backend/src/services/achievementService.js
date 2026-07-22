@@ -573,7 +573,7 @@ const updateAchievementProgress = async (
       });
     }
   } catch (error) {
-    // console.error("Update achievement progress error:", error);
+    
   }
 };
 
