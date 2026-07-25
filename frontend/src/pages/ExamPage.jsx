@@ -140,7 +140,7 @@ export const ExamPage = () => {
         toast.error("Failed to submit exam", { id: loadingToast });
       }
     } catch (error) {
-      // console.error("❌ Auto-submit error:", error);
+      
       toast.error("Failed to auto-submit exam");
     } finally {
       isSubmittingRef.current = false;
