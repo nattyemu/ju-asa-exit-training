@@ -78,7 +78,7 @@ export const Dashboard = () => {
         });
       }
     } catch (error) {
-      // console.error("Failed to load admin stats:", error);
+     
       // toast.error("Failed to load admin dashboard statistics");
       setAdminStats({
         activeExams: 0,
