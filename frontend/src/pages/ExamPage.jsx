@@ -106,7 +106,7 @@ export const ExamPage = () => {
     isSubmittingRef.current = true;
 
     try {
-      // console.log("🔄 ExamPage: Time up - Starting auto-submit");
+      
 
       // Clear any pending saves
       if (saveAnswerDebounceRef.current) {
