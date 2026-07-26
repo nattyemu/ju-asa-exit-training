@@ -62,7 +62,7 @@ export const profileService = {
       const response = await api.delete(`/upload/profiles/${publicId}`);
       return response.data;
     } catch (error) {
-      console.error("Error deleting profile image:", error);
+      
       return {
         success: false,
         message: "Failed to delete profile image",
