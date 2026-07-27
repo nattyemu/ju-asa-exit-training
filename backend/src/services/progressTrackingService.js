@@ -198,7 +198,7 @@ export const getLeaderboard = async (timeRange = "month", limit = 10) => {
       },
     };
   } catch (error) {
-    // console.error("Leaderboard error:", error);
+    
     return {
       success: false,
       error: error.message,
