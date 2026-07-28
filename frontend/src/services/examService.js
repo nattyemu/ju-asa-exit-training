@@ -128,7 +128,7 @@ export const examService = {
       // First try detailed endpoint
       return await api.get(`/results/${examId}/detailed`);
     } catch (error) {
-      // If detailed endpoint not found (404), try basic endpoint
+      
       if (error.response?.status === 404) {
         return await api.get(`/results/exam/${examId}`);
       }
