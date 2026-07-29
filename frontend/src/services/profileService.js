@@ -47,7 +47,7 @@ export const profileService = {
       const response = await api.put("/user/profile", requestData);
       return response.data;
     } catch (error) {
-      console.error("Error updating profile:", error);
+      
       throw error;
     }
   },
