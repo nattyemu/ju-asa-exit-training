@@ -39,7 +39,7 @@ class AutoSubmitService {
               return true;
             }
           } catch (submitError) {
-            // console.error("Auto-submit error:", submitError);
+            console.error("Auto-submit error:", submitError);
 
             if (
               submitError.response?.status === 404 ||
