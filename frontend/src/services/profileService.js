@@ -85,7 +85,7 @@ export const profileService = {
 
       return response.data;
     } catch (error) {
-      // console.error("Error uploading profile image:", error);
+       console.error("Error uploading profile image:", error);
       throw error;
     }
   },
