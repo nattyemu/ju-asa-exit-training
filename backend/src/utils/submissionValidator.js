@@ -30,7 +30,7 @@ export const validateAllQuestionsAnswered = (studentAnswers, examQuestions) => {
       answeredQuestions: answeredQuestionIds.size,
     };
   } catch (error) {
-    console.error("Error validating questions:", error);
+   // console.error("Error validating questions:", error);
     return {
       isValid: false,
       unansweredCount: 0,
