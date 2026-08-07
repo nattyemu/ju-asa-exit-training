@@ -139,7 +139,7 @@ export const sendExamReminders = async (examId = null) => {
       },
     };
   } catch (error) {
-    // console.error("❌ Exam reminders error:", error);
+    console.error("❌ Exam reminders error:", error);
     return {
       success: false,
       error: error.message,
