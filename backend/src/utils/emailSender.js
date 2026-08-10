@@ -15,7 +15,7 @@ export const sendEmail = async (user_email, otp = null, isPasswordResetConfirmat
 
     if (isPasswordResetConfirmation) {
       // Password reset confirmation email
-      subject = "✅ Password Reset Successful";
+      subject = "Password Reset Successful";
       html = `
         <div style="
           font-family: Arial, sans-serif;
