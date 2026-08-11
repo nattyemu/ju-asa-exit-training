@@ -66,7 +66,7 @@ export const sendExamReminder = async (userEmail, examDetails) => {
 };
 
 /**
- * Deadline warning email template
+ * Deadline warning email 
  */
 export const sendDeadlineWarning = async (userEmail, examDetails) => {
   const { studentName, examTitle, endTime, timeLeft } = examDetails;
