@@ -253,6 +253,7 @@ export const getStudyTimeAnalytics = async (studentId) => {
       },
     };
   } catch (error) {
+console.log(error)
     return {
       success: false,
       error: error.message,
