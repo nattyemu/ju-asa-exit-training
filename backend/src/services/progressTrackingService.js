@@ -129,7 +129,7 @@ export const getEnhancedStudentProgress = async (
       },
     };
   } catch (error) {
-    
+    console.log(error)
     return {
       success: false,
       error: error.message,
