@@ -110,7 +110,7 @@ export const sendExamReminders = async (examId = null) => {
             sentAt: new Date(),
           });
         } catch (emailError) {
-          // console.error(`Failed to send email: ${emailError.message}`);
+          console.error(`Failed to send email: ${emailError.message}`);
           results.push({
             examId: exam.id,
             studentId: student.userId,
