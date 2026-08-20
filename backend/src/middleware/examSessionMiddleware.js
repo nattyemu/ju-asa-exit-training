@@ -39,7 +39,7 @@ export const validateSessionOwnership = async (req, res, next) => {
     req.session = session;
     next();
   } catch (error) {
-    // console.error("Session validation error:", error);
+    console.error("Session validation error:", error);
 
     return res.status(500).json({
       success: false,
