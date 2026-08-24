@@ -92,7 +92,7 @@ export const calculateScore = async (studentExamId) => {
       answers: detailedResults,
     };
   } catch (error) {
-    
+    console.log(error)
     throw new Error("Failed to calculate exam score");
   }
 };
