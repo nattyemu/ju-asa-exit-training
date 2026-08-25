@@ -80,7 +80,7 @@ export const recalculateExamRankings = async (examId) => {
       message: `Recalculated rankings for ${allResults.length} results`,
     };
   } catch (error) {
-   
+   console.log(error)
     throw new Error("Failed to recalculate rankings");
   }
 };
@@ -113,7 +113,7 @@ export const getTopRankings = async (examId, limit = 10) => {
 
     return Array.isArray(rankings) ? rankings : [];
   } catch (error) {
-    console.log(error)
+   // console.log(error)
     return [];
   }
 };
