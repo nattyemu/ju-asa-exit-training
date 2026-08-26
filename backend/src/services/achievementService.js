@@ -296,7 +296,7 @@ export const checkImmediateAchievements = async (
       },
     };
   } catch (error) {
-    //console.log(error)
+    console.log(error)
     return {
       success: false,
       error: error.message,
