@@ -212,7 +212,7 @@ export const ExamPage = () => {
     const loadExam = async () => {
       // Check if we have examId from state
       if (!examId || user?.role !== "STUDENT") {
-        // console.log("❌ No examId in state, redirecting to dashboard");
+        // console.log(" No examId in state, redirecting to dashboard");
         navigate("/dashboard");
         return;
       }
@@ -230,7 +230,7 @@ export const ExamPage = () => {
             navigate("/dashboard");
             return;
           }
-          // console.log("✅ Session found");
+          // console.log("Session found");
 
           // Refresh time on load
           refreshRemainingTime();
