@@ -15,7 +15,7 @@ export const scheduleNotificationJobs = () => {
       const result = await sendExamReminders();
       
     } catch (error) {
-      // console.error("❌ Exam reminders job failed:", error.message);
+      // console.error("Exam reminders job failed:", error.message);
     }
   });
 
