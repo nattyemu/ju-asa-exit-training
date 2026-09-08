@@ -27,7 +27,7 @@ export const runAutoSubmissionCheck = async () => {
       .groupBy(studentExams.id);
 
     // console.log(
-    //   `📊 [AUTO-CHECK] Found ${activeSessions.length} active sessions`
+    //   `[AUTO-CHECK] Found ${activeSessions.length} active sessions`
     // );
 
     const results = [];
@@ -50,7 +50,7 @@ export const runAutoSubmissionCheck = async () => {
       const abandoned = now - updatedAt > 24 * 60 * 60 * 1000; // 24 hours
 
       if (durationExpired || deadlinePassed || abandoned) {
-        // console.log(`🚨 [AUTO-CHECK] Processing session ${session.id}:`, {
+        // console.log(`[AUTO-CHECK] Processing session ${session.id}:`, {
         //   durationExpired,
         //   deadlinePassed,
         //   abandoned,
@@ -114,7 +114,7 @@ export const runAutoSubmissionCheck = async () => {
     ).length;
 
     // console.log(
-    //   `✅ [AUTO-CHECK] Completed: ${autoSubmitted} auto-submitted, ${deleted} deleted`
+    //   `[AUTO-CHECK] Completed: ${autoSubmitted} auto-submitted, ${deleted} deleted`
     // );
 
     return {
@@ -125,7 +125,7 @@ export const runAutoSubmissionCheck = async () => {
       results,
     };
   } catch (error) {
-    // console.error("❌ [AUTO-CHECK] Error:", error);
+    // console.error("[AUTO-CHECK] Error:", error);
     return {
       success: false,
       message: "Auto-submission check failed",
