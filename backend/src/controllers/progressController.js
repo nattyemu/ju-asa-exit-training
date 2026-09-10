@@ -33,7 +33,7 @@ export const getEnhancedProgressController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    // console.error("Enhanced progress controller error:", error);
+     console.error("Enhanced progress controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve student progress",
@@ -63,7 +63,7 @@ export const getMyProgressController = async (req, res) => {
       data: result.data,
     });
   } catch (error) {
-    // console.error("My progress controller error:", error);
+    console.error("My progress controller error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve your progress",

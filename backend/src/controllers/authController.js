@@ -121,7 +121,7 @@ export const register = async (req, res) => {
       },
     });
   } catch (error) {
-    // console.error("Registration error:", error);
+     console.error("Registration error:", error);
 
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -276,7 +276,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Forgot password error:", error);
+   // console.error("Forgot password error:", error);
     return res.status(500).json({
       success: false,
       message: "An error occurred. Please try again.",
