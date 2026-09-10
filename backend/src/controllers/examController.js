@@ -44,7 +44,7 @@ export const createExam = async (req, res) => {
       },
     });
   } catch (error) {
-    // console.error("Create exam error:", error);
+    console.error("Create exam error:", error);
 
     // Handle specific database errors
     if (error.code === "ER_DUP_ENTRY") {
@@ -111,7 +111,7 @@ export const getAllExams = async (req, res) => {
       },
     });
   } catch (error) {
-    // console.error("Get all exams error:", error);
+     console.error("Get all exams error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch exams",
