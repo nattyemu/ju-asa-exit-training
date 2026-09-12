@@ -148,10 +148,10 @@ export const setupAutoSubmissionCron = () => {
     await runAutoSubmissionCheck();
   });
   
-  console.log('⏰ Auto-submission cron job scheduled: every minute');
+  console.log('Auto-submission cron job scheduled: every minute');
   */
   
   // console.log(
-  //   "⏰ Auto-submission job ready. Call runAutoSubmissionCheck() periodically."
+  //   "Auto-submission job ready. Call runAutoSubmissionCheck() periodically."
   // );
 };
