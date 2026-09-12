@@ -84,7 +84,7 @@ export const validateSubmissionConditions = (session, exam) => {
       message: "Valid for submission",
     };
   } catch (error) {
-    console.error("Error validating submission conditions:", error);
+    // console.error("Error validating submission conditions:", error);
     return {
       valid: false,
       message: "Error validating submission",
