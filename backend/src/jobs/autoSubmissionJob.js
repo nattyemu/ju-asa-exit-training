@@ -26,9 +26,9 @@ export const runAutoSubmissionCheck = async () => {
       .where(and(isNull(studentExams.submittedAt), eq(exams.isActive, true)))
       .groupBy(studentExams.id);
 
-    // console.log(
-    //   `[AUTO-CHECK] Found ${activeSessions.length} active sessions`
-    // );
+    console.log(
+      `[AUTO-CHECK] Found ${activeSessions.length} active sessions`
+    );
 
     const results = [];
 
