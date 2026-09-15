@@ -125,7 +125,7 @@ export const runAutoSubmissionCheck = async () => {
       results,
     };
   } catch (error) {
-     console.error("[AUTO-CHECK] Error:", error);
+   //  console.error("[AUTO-CHECK] Error:", error);
     return {
       success: false,
       message: "Auto-submission check failed",
