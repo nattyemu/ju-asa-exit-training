@@ -15,7 +15,7 @@ export const scheduleNotificationJobs = () => {
       const result = await sendExamReminders();
       
     } catch (error) {
-      // console.error("Exam reminders job failed:", error.message);
+      console.error("Exam reminders job failed:", error.message);
     }
   });
 
@@ -28,7 +28,7 @@ export const scheduleNotificationJobs = () => {
       // In a real system, you'd clean up old notification logs
       // console.log("Cleanup completed");
     } catch (error) {
-      // console.error("Cleanup job failed:", error.message);
+      console.error("Cleanup job failed:", error.message);
     }
   });
 
