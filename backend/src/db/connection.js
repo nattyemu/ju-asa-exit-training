@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { DATABASE_URL } from "../config/index.js";
 
-console.log(" Connecting to database...");
+console.log("Connecting to database....");
 
 let connection;
 let db;
