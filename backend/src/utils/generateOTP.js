@@ -1,4 +1,5 @@
 const generateOTP = () => {
+// containers numbers only 
   const digits = "0123456789";
   let otp = "";
   for (let i = 0; i < 6; i++) {
