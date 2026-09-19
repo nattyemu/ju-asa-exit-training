@@ -28,7 +28,7 @@ export const scheduleNotificationJobs = () => {
       // In a real system, you'd clean up old notification logs
       // console.log("Cleanup completed");
     } catch (error) {
-      console.error("Cleanup job failed:", error.message);
+    //  console.error("Cleanup job failed:", error.message);
     }
   });
 
