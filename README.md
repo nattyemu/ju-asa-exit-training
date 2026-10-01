@@ -17,4 +17,4 @@ A comprehensive training platform that simulates the Ethiopian University Exit E
 **Database:** MySQL with drizzle ORM  
 **Authentication:** JWT
 
-## 📁 Project Structure
+
