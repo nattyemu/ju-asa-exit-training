@@ -33,7 +33,7 @@ export const profileService = {
             }
           }
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+           console.error("Failed to upload image:", uploadError);
         }
       }
 
@@ -85,7 +85,7 @@ export const profileService = {
 
       return response.data;
     } catch (error) {
-       console.error("Error uploading profile image:", error);
+       // console.error("Error uploading profile image:", error);
       throw error;
     }
   },
