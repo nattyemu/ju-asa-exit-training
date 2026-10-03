@@ -27,7 +27,7 @@ export const authService = {
         data: null,
       };
     } catch (error) {
-      // console.error("authService.login error:", error);
+     console.error("authService.login error:", error);
 
       return {
         success: false,
@@ -47,7 +47,7 @@ export const authService = {
 
       // console.log("authService.logout completed");
     } catch (error) {
-      // console.error("authService.logout error:", error);
+      console.error("authService.logout error:", error);
     }
   },
   forgotPassword: async (email) => {
