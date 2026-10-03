@@ -139,7 +139,7 @@ export const sendExamReminders = async (examId = null) => {
       },
     };
   } catch (error) {
-    // console.error("❌ Exam reminders error:", error);
+    console.error("❌ Exam reminders error:", error);
     return {
       success: false,
       error: error.message,
@@ -264,7 +264,7 @@ export const getUnstartedExamStats = async () => {
         ),
       );
 
-    // console.log(`Found ${activeExams.length} active exams`);
+     console.log(`Found ${activeExams.length} active exams`);
 
     // Get total active students count
     const totalActiveStudentsResult = await db
