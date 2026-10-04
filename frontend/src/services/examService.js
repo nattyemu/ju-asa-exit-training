@@ -129,7 +129,7 @@ console.log(error)
       // First try detailed endpoint
       return await api.get(`/results/${examId}/detailed`);
     } catch (error) {
-      
+      console.log(error)
       if (error.response?.status === 404) {
         return await api.get(`/results/exam/${examId}`);
       }
