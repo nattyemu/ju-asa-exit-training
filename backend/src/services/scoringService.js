@@ -121,7 +121,7 @@ export const updateAnswerCorrectness = async (
         );
     }
   } catch (error) {
-   
+   console.log(error)
     throw new Error("Failed to update answer correctness");
   }
 };
