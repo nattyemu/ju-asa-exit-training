@@ -113,7 +113,7 @@ export const getTopRankings = async (examId, limit = 10) => {
 
     return Array.isArray(rankings) ? rankings : [];
   } catch (error) {
-   // console.log(error)
+    console.log(error)
     return [];
   }
 };
