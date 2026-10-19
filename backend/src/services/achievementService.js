@@ -520,7 +520,7 @@ export const checkDelayedAchievements = async (studentId) => {
       },
     };
   } catch (error) {
-  //   console.error("Check delayed achievements error:", error);
+   console.error("Check delayed achievements error:", error);
     return {
       success: false,
       error: error.message,
