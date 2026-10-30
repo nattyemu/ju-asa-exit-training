@@ -573,7 +573,7 @@ const updateAchievementProgress = async (
       });
     }
   } catch (error) {
-    console.log(error)
+   // console.log(error)
   }
 };
 
@@ -753,7 +753,7 @@ export const getTopAchievers = async (limit = 5) => {
       },
     };
   } catch (error) {
-    // console.error("Top achievers error:", error);
+    console.error("Top achievers error:", error);
     return {
       success: false,
       error: error.message,
