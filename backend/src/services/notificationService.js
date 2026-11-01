@@ -244,7 +244,7 @@ export const sendUnstartedExamReminders = async (examId) => {
 
 export const getUnstartedExamStats = async () => {
   try {
-    // console.log("=== GETTING UNSTARTED EXAM STATS ===");
+    console.log("=== GETTING UNSTARTED EXAM STATS ===");
 
     const now = new Date();
 
@@ -273,7 +273,7 @@ export const getUnstartedExamStats = async () => {
       .where(and(eq(users.role, "STUDENT"), eq(users.isActive, true)));
 
     const totalActiveStudents = totalActiveStudentsResult[0]?.count || 0;
-    // console.log(`Total active students: ${totalActiveStudents}`);
+     console.log(`Total active students: ${totalActiveStudents}`);
 
     // Get unstarted counts for each exam
     const stats = [];
