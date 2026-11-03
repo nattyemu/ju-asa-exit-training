@@ -139,7 +139,7 @@ export const sendExamReminders = async (examId = null) => {
       },
     };
   } catch (error) {
-   console.error("❌ Exam reminders error:", error);
+   console.error("Exam reminders error:", error);
     return {
       success: false,
       error: error.message,
@@ -157,7 +157,7 @@ export const sendUnstartedExamReminders = async (examId) => {
       throw new Error("Exam ID is required");
     }
 
-    // 1️⃣ Get active exam
+    // Get active exam
     const examResult = await db
       .select({
         id: exams.id,
