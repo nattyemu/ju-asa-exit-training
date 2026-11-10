@@ -127,7 +127,7 @@ export const exportExamResults = async (examId, format = "csv") => {
       };
     }
   } catch (error) {
-    // console.error("Export results error:", error);
+  console.error("Export results error:", error);
     return {
       success: false,
       error: error.message || "Failed to export exam results",
