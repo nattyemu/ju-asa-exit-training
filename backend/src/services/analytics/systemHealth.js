@@ -59,7 +59,7 @@ export const getSystemHealth = async () => {
       },
     };
   } catch (error) {
-    console.error("System health check error:", error);
+    // console.error("System health check error:", error);
     return {
       success: false,
       error: error.message,
