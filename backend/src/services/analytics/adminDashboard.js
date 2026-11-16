@@ -279,7 +279,7 @@ export const getSystemMonitoring = async () => {
       },
     };
   } catch (error) {
-    console.error("System monitoring error:", error);
+   // console.error("System monitoring error:", error);
     return {
       success: false,
       error: error.message,
@@ -418,7 +418,7 @@ export const getStudentProgress = async (
       },
     };
   } catch (error) {
-    // console.error("Student progress error:", error);
+    console.error("Student progress error:", error);
     return {
       success: false,
       error: error.message,
