@@ -129,7 +129,7 @@ export const getEnhancedStudentProgress = async (
       },
     };
   } catch (error) {
-    // console.log(error)
+    console.log(error)
     return {
       success: false,
       error: error.message,
@@ -253,7 +253,7 @@ export const getStudyTimeAnalytics = async (studentId) => {
       },
     };
   } catch (error) {
-// console.log(error)
+console.log(error)
     return {
       success: false,
       error: error.message,
