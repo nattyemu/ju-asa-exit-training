@@ -296,7 +296,7 @@ export const checkImmediateAchievements = async (
       },
     };
   } catch (error) {
-  console.log(error)
+ // console.log(error)
     return {
       success: false,
       error: error.message,
@@ -330,7 +330,7 @@ const getSubjectMasteryAcrossAllExams = async (studentId) => {
 
     return subjectMastery;
   } catch (error) {
-    // console.error("Get subject mastery across all exams error:", error);
+     console.error("Get subject mastery across all exams error:", error);
     return [];
   }
 };
